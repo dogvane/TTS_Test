@@ -218,6 +218,7 @@ class TTSRequest(BaseModel):
     input: str = Field(..., description="待合成文本")
     voice: str = Field(default="default", description="音色描述或预设名")
     reference_audio: Optional[str] = Field(default=None, description="Base64 编码的参考音频（voice clone）")
+    prompt_text: Optional[str] = Field(default=None, description="参考音频对应的文本（终极克隆）")
     response_format: str = Field(default="wav", description="输出格式: wav")
     cfg_value: float = Field(default=2.0, ge=0.5, le=10.0)
     inference_timesteps: int = Field(default=10, ge=1, le=100)
@@ -268,6 +269,7 @@ def create_speech(request: TTSRequest):
             text=request.input,
             voice=request.voice,
             reference_wav_bytes=ref_bytes,
+            prompt_text=request.prompt_text,
             cfg_value=request.cfg_value,
             inference_timesteps=request.inference_timesteps,
         )

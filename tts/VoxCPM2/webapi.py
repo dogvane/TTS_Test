@@ -78,9 +78,22 @@ def _validate_and_build(request: TTSRequest) -> tuple[dict, list[str]]:
     if not request.input.strip():
         raise HTTPException(status_code=400, detail="input text is empty")
 
-    text = request.input
-    if request.voice and request.voice != "default":
-        text = f"({request.voice}){text}"
+    # 优先级：如果有 reference audio 或 prompt text，则使用 voice clone 模式
+    has_clone_input = (request.reference_wav_path or request.reference_audio or
+                      request.prompt_wav_path or request.prompt_text)
+
+    # 克隆模式：直接使用原始文本，不做任何修改
+    if has_clone_input:
+        text = request.input
+        logger.info(f"[CLONE MODE] Using raw text: '{text[:50]}...'")
+    # 非克隆模式：可以使用 voice design
+    else:
+        text = request.input
+        if request.voice and request.voice != "default":
+            text = f"({request.voice}){text}"
+            logger.info(f"[VOICE DESIGN MODE] Modified text: '{text[:50]}...'")
+        else:
+            logger.info(f"[BASIC MODE] Using raw text: '{text[:50]}...'")
 
     temp_files = []
 
@@ -96,8 +109,17 @@ def _validate_and_build(request: TTSRequest) -> tuple[dict, list[str]]:
         tmp.close()
         temp_files.append(tmp.name)
         ref_path = tmp.name
+        logger.info(f"[CLONE MODE] Wrote reference audio to temp file: {ref_path}")
     elif request.reference_wav_path and not os.path.isfile(request.reference_wav_path):
         raise HTTPException(400, f"reference_wav_path not found: {request.reference_wav_path}")
+
+    # 处理 prompt audio
+    prompt_path = request.prompt_wav_path
+    # 如果有 prompt_text 且有 ref_path，但没有 prompt_path，使用 ref_path 作为 prompt_path
+    if request.prompt_text and not prompt_path and ref_path:
+        logger.info("[CLONE MODE] Using reference_wav as prompt_wav for ultimate cloning")
+        prompt_path = ref_path
+        ref_path = None  # 终极克隆模式，不使用 reference_wav_path
 
     if request.prompt_wav_path:
         if not os.path.isfile(request.prompt_wav_path):
@@ -108,13 +130,19 @@ def _validate_and_build(request: TTSRequest) -> tuple[dict, list[str]]:
     kwargs = dict(
         text=text,
         reference_wav_path=ref_path,
-        prompt_wav_path=request.prompt_wav_path,
+        prompt_wav_path=prompt_path,
         prompt_text=request.prompt_text,
         cfg_value=request.cfg_value,
         inference_timesteps=request.inference_timesteps,
         normalize=False,
         denoise=False,
     )
+
+    if prompt_path and request.prompt_text:
+        logger.info(f"[ULTIMATE CLONE] prompt_wav={prompt_path}")
+        logger.info(f"[ULTIMATE CLONE] prompt_text='{request.prompt_text}'")
+        logger.info(f"[ULTIMATE CLONE] generate_text='{text}'")
+
     return kwargs, temp_files
 
 

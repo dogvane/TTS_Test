@@ -41,6 +41,7 @@ class VoxCPM2Adapter(BaseAdapter):
 
     def _build_request(self, text: str, voice: str = "default",
                        reference_wav_bytes: bytes | None = None,
+                       prompt_text: str | None = None,
                        cfg_value: float = 2.0,
                        inference_timesteps: int = 10) -> dict:
         payload = {
@@ -53,15 +54,18 @@ class VoxCPM2Adapter(BaseAdapter):
         }
         if reference_wav_bytes:
             payload["reference_audio"] = base64.b64encode(reference_wav_bytes).decode("ascii")
+            if prompt_text:
+                payload["prompt_text"] = prompt_text
         return payload
 
     def synthesize(self, text: str, voice: str = "default",
                    reference_wav_bytes: bytes | None = None,
+                   prompt_text: str | None = None,
                    cfg_value: float = 2.0,
                    inference_timesteps: int = 10,
                    **kwargs) -> np.ndarray:
         payload = self._build_request(text, voice, reference_wav_bytes,
-                                      cfg_value, inference_timesteps)
+                                      prompt_text, cfg_value, inference_timesteps)
         resp = requests.post(
             f"{self.base_url}/v1/audio/speech",
             json=payload,
@@ -74,11 +78,12 @@ class VoxCPM2Adapter(BaseAdapter):
 
     def synthesize_streaming(self, text: str, voice: str = "default",
                              reference_wav_bytes: bytes | None = None,
+                             prompt_text: str | None = None,
                              cfg_value: float = 2.0,
                              inference_timesteps: int = 10,
                              **kwargs) -> Generator[np.ndarray, None, None]:
         payload = self._build_request(text, voice, reference_wav_bytes,
-                                      cfg_value, inference_timesteps)
+                                      prompt_text, cfg_value, inference_timesteps)
         resp = requests.post(
             f"{self.base_url}/v1/audio/speech/stream",
             json=payload,

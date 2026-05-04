@@ -99,7 +99,8 @@ def get_model_info(engine: str) -> dict | None:
 
 
 def synthesize(engine: str, text: str, voice: str = "default",
-               reference_wav_bytes: bytes | None = None) -> tuple[bytes, dict]:
+               reference_wav_bytes: bytes | None = None,
+               prompt_text: str | None = None) -> tuple[bytes, dict]:
     import base64
     payload = {
         "model": engine,
@@ -109,6 +110,9 @@ def synthesize(engine: str, text: str, voice: str = "default",
     }
     if reference_wav_bytes:
         payload["reference_audio"] = base64.b64encode(reference_wav_bytes).decode("ascii")
+        # 如果有 reference audio 且有 prompt_text，也传递 prompt_text
+        if prompt_text:
+            payload["prompt_text"] = prompt_text
 
     t0 = time.perf_counter()
     resp = requests.post(f"{GATEWAY_URL}/v1/audio/speech", json=payload, timeout=300)
@@ -373,7 +377,13 @@ def run(engine: str, test_ids: list[str] | None = None):
                 try:
                     with open(ref_path, "rb") as f:
                         ref_bytes = f.read()
-                    audio_bytes, metrics = synthesize(engine, clone_text, reference_wav_bytes=ref_bytes)
+                    # 使用参考音频文件名（不含扩展名）作为 prompt_text，实现终极克隆
+                    prompt_text = os.path.splitext(os.path.basename(ref_path))[0]
+                    audio_bytes, metrics = synthesize(
+                        engine, clone_text,
+                        reference_wav_bytes=ref_bytes,
+                        prompt_text=prompt_text
+                    )
                     wav_file = save_wav(run_dir, file_id, audio_bytes)
                     save_srt(run_dir, file_id, clone_text, metrics["audio_duration"])
                     logger.info("[clone/%s] Done (RTF=%.3f)", tag, metrics["rtf"])
