@@ -1,0 +1,29 @@
+# 评测结果（含音频、字幕、报告）
+results/
+
+# 后端日志
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+
+# 环境变量和密钥
+.env
+*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store

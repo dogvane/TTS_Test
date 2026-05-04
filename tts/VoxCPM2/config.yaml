@@ -1,0 +1,19 @@
+# VoxCPM2 引擎配置
+
+# webapi 地址（由网关自动启动，无需手动运行）
+backend_url: "http://localhost:8000"
+
+# webapi 端口（网关根据此端口自动启动后端）
+webapi_port: 8000
+
+# 请求超时（秒）
+timeout: 120
+
+# 音频参数
+sample_rate: 48000
+
+# 模型路径（权重文件所在目录）
+model_path: "/mnt/o/ai/TTS/VoxCPM/models/VoxCPM2"
+
+# 源代码路径（webapi.py 通过 sys.path 引入）
+source_path: "/mnt/o/ai/TTS/VoxCPM/VoxCPM"
