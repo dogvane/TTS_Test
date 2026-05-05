@@ -30,8 +30,11 @@ class BaseAdapter(ABC):
         text: str,
         voice: str = "default",
         reference_wav_bytes: bytes | None = None,
-        cfg_value: float = 2.0,
-        inference_timesteps: int = 10,
+        prompt_text: str | None = None,
+        speed: float = 1.0,
+        temperature: float = 0.7,
+        top_p: float = 0.7,
+        repetition_penalty: float = 1.1,
         **kwargs,
     ) -> np.ndarray:
         """合成语音，返回 1D float32 numpy 数组。"""
@@ -43,8 +46,11 @@ class BaseAdapter(ABC):
         text: str,
         voice: str = "default",
         reference_wav_bytes: bytes | None = None,
-        cfg_value: float = 2.0,
-        inference_timesteps: int = 10,
+        prompt_text: str | None = None,
+        speed: float = 1.0,
+        temperature: float = 0.7,
+        top_p: float = 0.7,
+        repetition_penalty: float = 1.1,
         **kwargs,
     ) -> Generator[np.ndarray, None, None]:
         """流式合成语音，逐步 yield 音频 chunk。"""

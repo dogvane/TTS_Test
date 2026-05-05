@@ -42,30 +42,37 @@ class VoxCPM2Adapter(BaseAdapter):
     def _build_request(self, text: str, voice: str = "default",
                        reference_wav_bytes: bytes | None = None,
                        prompt_text: str | None = None,
-                       cfg_value: float = 2.0,
-                       inference_timesteps: int = 10) -> dict:
+                       speed: float = 1.0,
+                       temperature: float = 0.7,
+                       top_p: float = 0.7,
+                       repetition_penalty: float = 1.1) -> dict:
         payload = {
             "model": "VoxCPM2",
             "input": text,
             "voice": voice,
-            "cfg_value": cfg_value,
-            "inference_timesteps": inference_timesteps,
+            "speed": speed,
             "response_format": "wav",
+            "temperature": temperature,
+            "top_p": top_p,
+            "repetition_penalty": repetition_penalty,
         }
         if reference_wav_bytes:
             payload["reference_audio"] = base64.b64encode(reference_wav_bytes).decode("ascii")
-            if prompt_text:
-                payload["prompt_text"] = prompt_text
+        if prompt_text:
+            payload["prompt_text"] = prompt_text
         return payload
 
     def synthesize(self, text: str, voice: str = "default",
                    reference_wav_bytes: bytes | None = None,
                    prompt_text: str | None = None,
-                   cfg_value: float = 2.0,
-                   inference_timesteps: int = 10,
+                   speed: float = 1.0,
+                   temperature: float = 0.7,
+                   top_p: float = 0.7,
+                   repetition_penalty: float = 1.1,
                    **kwargs) -> np.ndarray:
         payload = self._build_request(text, voice, reference_wav_bytes,
-                                      prompt_text, cfg_value, inference_timesteps)
+                                      prompt_text, speed, temperature,
+                                      top_p, repetition_penalty)
         resp = requests.post(
             f"{self.base_url}/v1/audio/speech",
             json=payload,
@@ -79,11 +86,14 @@ class VoxCPM2Adapter(BaseAdapter):
     def synthesize_streaming(self, text: str, voice: str = "default",
                              reference_wav_bytes: bytes | None = None,
                              prompt_text: str | None = None,
-                             cfg_value: float = 2.0,
-                             inference_timesteps: int = 10,
+                             speed: float = 1.0,
+                             temperature: float = 0.7,
+                             top_p: float = 0.7,
+                             repetition_penalty: float = 1.1,
                              **kwargs) -> Generator[np.ndarray, None, None]:
         payload = self._build_request(text, voice, reference_wav_bytes,
-                                      prompt_text, cfg_value, inference_timesteps)
+                                      prompt_text, speed, temperature,
+                                      top_p, repetition_penalty)
         resp = requests.post(
             f"{self.base_url}/v1/audio/speech/stream",
             json=payload,

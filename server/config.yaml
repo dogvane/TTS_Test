@@ -6,5 +6,7 @@ port: 9000
 
 # 已注册的引擎列表（对应 tts/ 下的目录名）
 engines:
-  - VoxCPM2
-  # - qwen-tts
+  - name: VoxCPM2
+    conda_env: voxcpm
+  # - name: qwen-tts
+  #   conda_env: qwen-tts

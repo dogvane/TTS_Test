@@ -55,19 +55,19 @@ logger.info("Model loaded. Sample rate: %d Hz", SAMPLE_RATE)
 # Request model
 # ---------------------------------------------------------------------------
 class TTSRequest(BaseModel):
+    # ── 标准 OpenAI 字段 ──
     model: str = Field(default="VoxCPM2", description="Model name")
     input: str = Field(..., description="Text to synthesize")
-    voice: str = Field(
-        default="default",
-        description="Voice description for Voice Design mode. Use 'default' for basic TTS.",
-    )
-    reference_wav_path: Optional[str] = Field(default=None, description="Path to reference audio for cloning.")
-    reference_audio: Optional[str] = Field(default=None, description="Base64 encoded reference audio for cloning.")
-    prompt_wav_path: Optional[str] = Field(default=None, description="Path to prompt audio for ultimate cloning.")
-    prompt_text: Optional[str] = Field(default=None, description="Transcript of prompt audio.")
-    response_format: str = Field(default="wav", description="Output format: wav")
-    cfg_value: float = Field(default=2.0, ge=0.5, le=10.0)
-    inference_timesteps: int = Field(default=10, ge=1, le=100)
+    voice: str = Field(default="default", description="Voice name, description, or emotion tag")
+    response_format: str = Field(default="wav", description="Output format: wav / mp3 / opus / pcm")
+    speed: float = Field(default=1.0, ge=0.25, le=4.0, description="Speed multiplier")
+    # ── 扩展测试字段 ──
+    reference_audio: Optional[str] = Field(default=None, description="Base64 encoded reference audio for cloning")
+    prompt_text: Optional[str] = Field(default=None, description="Transcript of reference/prompt audio")
+    reference_wav_path: Optional[str] = Field(default=None, description="Path to reference audio for cloning")
+    temperature: float = Field(default=0.7, ge=0.1, le=1.0, description="Sampling temperature")
+    top_p: float = Field(default=0.7, ge=0.1, le=1.0, description="Nucleus sampling threshold")
+    repetition_penalty: float = Field(default=1.1, ge=0.9, le=2.0, description="Repetition penalty")
 
 
 # ---------------------------------------------------------------------------
@@ -80,20 +80,20 @@ def _validate_and_build(request: TTSRequest) -> tuple[dict, list[str]]:
 
     # 优先级：如果有 reference audio 或 prompt text，则使用 voice clone 模式
     has_clone_input = (request.reference_wav_path or request.reference_audio or
-                      request.prompt_wav_path or request.prompt_text)
+                       request.prompt_text)
 
     # 克隆模式：直接使用原始文本，不做任何修改
     if has_clone_input:
         text = request.input
-        logger.info(f"[CLONE MODE] Using raw text: '{text[:50]}...'")
+        logger.info("[CLONE MODE] Using raw text: '%s...'", text[:50])
     # 非克隆模式：可以使用 voice design
     else:
         text = request.input
         if request.voice and request.voice != "default":
             text = f"({request.voice}){text}"
-            logger.info(f"[VOICE DESIGN MODE] Modified text: '{text[:50]}...'")
+            logger.info("[VOICE DESIGN MODE] Modified text: '%s...'", text[:50])
         else:
-            logger.info(f"[BASIC MODE] Using raw text: '{text[:50]}...'")
+            logger.info("[BASIC MODE] Using raw text: '%s...'", text[:50])
 
     temp_files = []
 
@@ -109,39 +109,39 @@ def _validate_and_build(request: TTSRequest) -> tuple[dict, list[str]]:
         tmp.close()
         temp_files.append(tmp.name)
         ref_path = tmp.name
-        logger.info(f"[CLONE MODE] Wrote reference audio to temp file: {ref_path}")
+        logger.info("[CLONE MODE] Wrote reference audio to temp file: %s", ref_path)
     elif request.reference_wav_path and not os.path.isfile(request.reference_wav_path):
         raise HTTPException(400, f"reference_wav_path not found: {request.reference_wav_path}")
 
-    # 处理 prompt audio
-    prompt_path = request.prompt_wav_path
-    # 如果有 prompt_text 且有 ref_path，但没有 prompt_path，使用 ref_path 作为 prompt_path
-    if request.prompt_text and not prompt_path and ref_path:
+    # 如果有 prompt_text 且有 ref_path，使用 ref_path 作为 prompt_wav（终极克隆模式）
+    prompt_path = None
+    if request.prompt_text and ref_path:
         logger.info("[CLONE MODE] Using reference_wav as prompt_wav for ultimate cloning")
         prompt_path = ref_path
         ref_path = None  # 终极克隆模式，不使用 reference_wav_path
 
-    if request.prompt_wav_path:
-        if not os.path.isfile(request.prompt_wav_path):
-            raise HTTPException(400, f"prompt_wav_path not found: {request.prompt_wav_path}")
-        if not request.prompt_text:
-            raise HTTPException(400, "prompt_text is required when prompt_wav_path is provided")
+    # 将 API 规范参数映射为 VoxCPM 模型实际接受的参数
+    # API: temperature/top_p/repetition_penalty -> Model: cfg_value/inference_timesteps
+    # VoxCPM 是扩散模型，不直接支持 temperature/top_p/repetition_penalty
+    # 这里使用默认值，保留 API 规范字段的扩展性
+    cfg_value = 2.0
+    inference_timesteps = 10
 
     kwargs = dict(
         text=text,
         reference_wav_path=ref_path,
         prompt_wav_path=prompt_path,
         prompt_text=request.prompt_text,
-        cfg_value=request.cfg_value,
-        inference_timesteps=request.inference_timesteps,
+        cfg_value=cfg_value,
+        inference_timesteps=inference_timesteps,
         normalize=False,
         denoise=False,
     )
 
     if prompt_path and request.prompt_text:
-        logger.info(f"[ULTIMATE CLONE] prompt_wav={prompt_path}")
-        logger.info(f"[ULTIMATE CLONE] prompt_text='{request.prompt_text}'")
-        logger.info(f"[ULTIMATE CLONE] generate_text='{text}'")
+        logger.info("[ULTIMATE CLONE] prompt_wav=%s", prompt_path)
+        logger.info("[ULTIMATE CLONE] prompt_text='%s'", request.prompt_text)
+        logger.info("[ULTIMATE CLONE] generate_text='%s'", text)
 
     return kwargs, temp_files
 
