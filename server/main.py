@@ -46,6 +46,8 @@ _engine_conda_envs: dict[str, str] = {}   # {engine_dir: conda_env_name}
 _backend_procs: dict[str, subprocess.Popen] = {}
 _backend_ready: dict[str, bool] = {}
 _backend_locks: dict[str, threading.Lock] = {}
+_adapter_to_dir: dict[str, str] = {}      # {adapter.name: engine_dir} 反向映射
+_engine_adapter_names: dict[str, str] = {} # {engine_dir: adapter.name} 引擎 -> 适配器名
 
 
 def _find_conda_python(conda_env: str) -> str | None:
@@ -102,6 +104,54 @@ def _get_adapter_name(engine_dir: str) -> str | None:
     return None
 
 
+def _check_health(port: int, expected_model: str | None = None) -> dict | None:
+    """检查后端 health 端点。返回 health dict 或 None。"""
+    try:
+        resp = requests.get(f"http://localhost:{port}/health", timeout=2)
+        if resp.status_code == 200:
+            data = resp.json()
+            if expected_model and data.get("model") != expected_model:
+                return None  # 模型身份不匹配
+            return data
+    except requests.RequestException:
+        pass
+    return None
+
+
+def _kill_port_process(port: int):
+    """杀死占用指定端口的进程（通过 lsof/fuser 或 netstat）。"""
+    import signal as sig
+    try:
+        if sys.platform == "win32":
+            result = subprocess.run(
+                f"netstat -ano | findstr :{port} | findstr LISTENING",
+                capture_output=True, text=True, timeout=5, shell=True,
+            )
+            for line in result.stdout.strip().splitlines():
+                parts = line.strip().split()
+                if parts:
+                    pid = int(parts[-1])
+                    logger.warning("[backend] Killing process %d on port %d (wrong model)", pid, port)
+                    os.kill(pid, sig.SIGTERM)
+        else:
+            # Linux/WSL: use fuser or lsof
+            result = subprocess.run(
+                ["fuser", f"{port}/tcp"],
+                capture_output=True, text=True, timeout=5,
+            )
+            pids = result.stdout.strip().split()
+            for pid_str in pids:
+                try:
+                    pid = int(pid_str)
+                    logger.warning("[backend] Killing process %d on port %d (wrong model)", pid, port)
+                    os.kill(pid, sig.SIGTERM)
+                except (ValueError, ProcessLookupError):
+                    pass
+        time.sleep(1)
+    except Exception as e:
+        logger.warning("[backend] Failed to kill process on port %d: %s", port, e)
+
+
 def ensure_backend(engine_dir: str) -> bool:
     """确保后端已启动并就绪，未启动则启动。返回是否就绪。"""
     if _backend_ready.get(engine_dir):
@@ -126,15 +176,31 @@ def ensure_backend(engine_dir: str) -> bool:
             logger.error("[backend] No webapi_port for %s", engine_dir)
             return False
 
-        # 检查是否已经在运行（可能外部启动的）
-        try:
-            resp = requests.get(f"http://localhost:{port}/health", timeout=2)
-            if resp.status_code == 200:
-                logger.info("[backend] %s already running on port %d", engine_dir, port)
-                _backend_ready[engine_dir] = True
-                return True
-        except requests.RequestException:
-            pass
+        expected_model = _engine_adapter_names.get(engine_dir, engine_dir)
+
+        # 检查端口上是否已有正确的后端在运行
+        health = _check_health(port, expected_model)
+        if health:
+            logger.info("[backend] %s already running on port %d", engine_dir, port)
+            _backend_ready[engine_dir] = True
+            return True
+
+        # 端口上有进程但模型身份不对 → 必须杀掉后重启
+        wrong_health = _check_health(port)
+        if wrong_health:
+            logger.warning("[backend] Port %d occupied by wrong model '%s' (expected '%s'), killing...",
+                           port, wrong_health.get("model"), expected_model)
+            _kill_port_process(port)
+
+        # 如果本引擎之前启动的子进程还活着，先停掉
+        old_proc = _backend_procs.get(engine_dir)
+        if old_proc and old_proc.poll() is None:
+            old_proc.terminate()
+            try:
+                old_proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                old_proc.kill()
+            _backend_ready[engine_dir] = False
 
         # 确定 python 路径：优先使用 conda 环境，回退到 sys.executable
         conda_env = _engine_conda_envs.get(engine_dir, "")
@@ -168,16 +234,14 @@ def ensure_backend(engine_dir: str) -> bool:
         deadline = time.time() + 600
         while time.time() < deadline:
             if proc.poll() is not None:
-                logger.error("[backend] %s exited with code %d, check logs/%s.log", engine_dir, proc.returncode, engine_dir)
+                logger.error("[backend] %s exited with code %d", engine_dir, proc.returncode)
                 return False
-            try:
-                resp = requests.get(f"http://localhost:{port}/health", timeout=3)
-                if resp.status_code == 200:
-                    logger.info("[backend] %s is ready", engine_dir)
-                    _backend_ready[engine_dir] = True
-                    return True
-            except requests.RequestException:
-                pass
+            health = _check_health(port, expected_model)
+            if health:
+                logger.info("[backend] %s is ready (model=%s, sr=%s)",
+                            engine_dir, health.get("model"), health.get("sample_rate"))
+                _backend_ready[engine_dir] = True
+                return True
             time.sleep(5)
 
         logger.error("[backend] %s failed to start within 600s", engine_dir)
@@ -233,6 +297,8 @@ def load_adapters(engine_defs: list[dict]) -> dict[str, BaseAdapter]:
 
         adapter = adapter_cls(config_path=config_path)
         adapters[adapter.name] = adapter
+        _adapter_to_dir[adapter.name] = name
+        _engine_adapter_names[name] = adapter.name
         logger.info("[adapter] %s -> %s", name, adapter.name)
     return adapters
 
@@ -265,22 +331,24 @@ class TTSRequest(BaseModel):
     reference_audio: Optional[str] = Field(default=None, description="Base64 编码的参考音频（voice clone）")
     prompt_text: Optional[str] = Field(default=None, description="参考音频对应的文本转录")
     reference_wav_path: Optional[str] = Field(default=None, description="参考音频本地文件路径（仅供 webapi 本地使用）")
-    temperature: float = Field(default=0.7, ge=0.1, le=1.0, description="采样温度")
-    top_p: float = Field(default=0.7, ge=0.1, le=1.0, description="Nucleus sampling 阈值")
+    temperature: float = Field(default=1.0, ge=0.1, le=2.0, description="采样温度")
+    top_p: float = Field(default=0.9, ge=0.1, le=1.0, description="Nucleus sampling 阈值")
     repetition_penalty: float = Field(default=1.1, ge=0.9, le=2.0, description="重复惩罚系数")
+    # ── session 自举克隆字段 ──
+    session_id: Optional[str] = Field(default=None, description="Session ID for bootstrap cloning across segments")
+    session_action: Optional[str] = Field(default=None, description="start|continue|end")
 
 
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 def _resolve_engine_dir(model_name: str) -> str | None:
-    """根据 adapter name 反查引擎目录名。"""
-    for eng_def in engine_defs:
-        name = eng_def["name"]
-        adapter = adapters.get(model_name)
-        if adapter:
-            return name
-    return None
+    """根据 adapter name 反查引擎目录名。
+
+    adapters 字典的 key 是 adapter.name（即请求中的 model 字段），
+    _adapter_to_dir 维护 adapter.name -> engine_dir 的映射。
+    """
+    return _adapter_to_dir.get(model_name)
 
 
 @app.post("/v1/audio/speech")
@@ -318,6 +386,8 @@ def create_speech(request: TTSRequest):
             temperature=request.temperature,
             top_p=request.top_p,
             repetition_penalty=request.repetition_penalty,
+            session_id=request.session_id,
+            session_action=request.session_action,
         )
     except Exception as e:
         logger.error("synthesize failed for '%s': %s", request.model, e, exc_info=True)
@@ -388,6 +458,85 @@ def list_models():
         info["available"] = adapter.health_check()
         models.append(info)
     return {"models": models}
+
+
+class InitModelRequest(BaseModel):
+    model: str = Field(..., description="引擎名称，如 VoxCPM2 或 MOSS-TTSD")
+
+
+class InitModelResponse(BaseModel):
+    model: str
+    status: str                   # "started" | "already_running" | "restarted" | "error"
+    is_restarted: bool            # 是否重新启动（杀掉旧进程后重启）
+    elapsed_seconds: float        # 启动耗时（秒）
+    health: Optional[dict] = None # health 端点返回的信息
+    error: Optional[str] = None
+
+
+@app.post("/v1/init_model", response_model=InitModelResponse)
+def init_model(request: InitModelRequest):
+    """显式启动指定引擎的后端进程。
+
+    runner.py 在评测开始时调用一次，用于提前加载模型、
+    记录启动耗时，以及判断是否需要重启。
+    """
+    model_name = request.model
+    logger.info("[gateway] POST /v1/init_model model=%s", model_name)
+
+    adapter = adapters.get(model_name)
+    if adapter is None:
+        raise HTTPException(400, f"Unknown model: {model_name}. Available: {list(adapters.keys())}")
+
+    engine_dir = _resolve_engine_dir(model_name)
+    if not engine_dir:
+        raise HTTPException(400, f"No engine directory found for model: {model_name}")
+
+    cfg = _engine_configs.get(engine_dir, {})
+    port = cfg.get("webapi_port")
+    expected_model = _engine_adapter_names.get(engine_dir, engine_dir)
+
+    # 检查当前状态
+    health = _check_health(port, expected_model)
+    if health:
+        # 已经是正确的模型在运行
+        return InitModelResponse(
+            model=model_name,
+            status="already_running",
+            is_restarted=False,
+            elapsed_seconds=0,
+            health=health,
+        )
+
+    # 判断是否需要杀掉错误进程后重启
+    wrong_health = _check_health(port)
+    is_restarted = wrong_health is not None
+
+    # 清除 ready 标记，强制 ensure_backend 走启动流程
+    _backend_ready[engine_dir] = False
+
+    t0 = time.perf_counter()
+    ok = ensure_backend(engine_dir)
+    elapsed = round(time.perf_counter() - t0, 2)
+
+    if not ok:
+        return InitModelResponse(
+            model=model_name,
+            status="error",
+            is_restarted=is_restarted,
+            elapsed_seconds=elapsed,
+            error=f"Backend failed to start within 600s",
+        )
+
+    health = _check_health(port, expected_model)
+    status = "restarted" if is_restarted else "started"
+
+    return InitModelResponse(
+        model=model_name,
+        status=status,
+        is_restarted=is_restarted,
+        elapsed_seconds=elapsed,
+        health=health,
+    )
 
 
 @app.get("/v1/models/{model_id}/capabilities")

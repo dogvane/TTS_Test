@@ -12,6 +12,7 @@ import csv
 import html
 import io
 import logging
+import numpy as np
 import os
 import re
 import sys
@@ -98,9 +99,27 @@ def get_model_info(engine: str) -> dict | None:
     return None
 
 
+def init_model(engine: str) -> dict:
+    """调用网关 init_model 接口启动引擎后端，返回启动信息。"""
+    try:
+        resp = requests.post(
+            f"{GATEWAY_URL}/v1/init_model",
+            json={"model": engine},
+            timeout=660,
+        )
+        resp.raise_for_status()
+        return resp.json()
+    except requests.RequestException as e:
+        logger.error("init_model failed: %s", e)
+        return {"model": engine, "status": "error", "is_restarted": False,
+                "elapsed_seconds": 0, "error": str(e)}
+
+
 def synthesize(engine: str, text: str, voice: str = "default",
                reference_wav_bytes: bytes | None = None,
-               prompt_text: str | None = None) -> tuple[bytes, dict]:
+               prompt_text: str | None = None,
+               session_id: str | None = None,
+               session_action: str | None = None) -> tuple[bytes, dict]:
     import base64
     payload = {
         "model": engine,
@@ -113,6 +132,10 @@ def synthesize(engine: str, text: str, voice: str = "default",
         # 如果有 reference audio 且有 prompt_text，也传递 prompt_text
         if prompt_text:
             payload["prompt_text"] = prompt_text
+    if session_id:
+        payload["session_id"] = session_id
+        if session_action:
+            payload["session_action"] = session_action
 
     t0 = time.perf_counter()
     resp = requests.post(f"{GATEWAY_URL}/v1/audio/speech", json=payload, timeout=300)
@@ -134,6 +157,79 @@ def synthesize(engine: str, text: str, voice: str = "default",
         "text_length": len(text),
     }
     return audio_bytes, metrics
+
+
+def split_text_to_segments(text: str, max_chars: int = 100) -> list[str]:
+    """将文本按行分割，超长行再按断句符号分割。"""
+    segments = []
+    for line in text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        if len(line) <= max_chars:
+            segments.append(line)
+        else:
+            # 按断句符号分割，保留标点
+            parts = re.split(r'(?<=[。！？；!?])\s*', line)
+            parts = [p.strip() for p in parts if p.strip()]
+            segments.extend(parts)
+    return segments
+
+
+def synthesize_segments(engine: str, text: str,
+                        max_chars: int = 100) -> tuple[bytes, dict]:
+    """分段合成文本，合并所有音频片段为一个 WAV。使用 session 自举克隆保持音色一致。"""
+    segments = split_text_to_segments(text, max_chars)
+    if not segments:
+        raise ValueError("No segments to synthesize")
+
+    import uuid
+    session_id = f"seg_{uuid.uuid4().hex[:8]}"
+    logger.info("  session_id=%s (%d segments)", session_id, len(segments))
+
+    total_tts_time = 0.0
+    wav_arrays = []
+    sr = None
+
+    for i, seg in enumerate(segments):
+        if len(segments) == 1:
+            action = "end"  # 单段不需要 session
+        elif i == 0:
+            action = "start"
+        elif i == len(segments) - 1:
+            action = "end"
+        else:
+            action = "continue"
+        logger.info("  segment %d/%d (%d chars) action=%s...",
+                     i + 1, len(segments), len(seg), action)
+        audio_bytes, metrics = synthesize(engine, seg,
+                                          session_id=session_id,
+                                          session_action=action)
+        total_tts_time += metrics["total_time"]
+
+        wav, seg_sr = sf.read(io.BytesIO(audio_bytes))
+        if sr is None:
+            sr = seg_sr
+        wav_arrays.append(wav)
+
+    # 合并所有音频片段
+    combined = np.concatenate(wav_arrays)
+    duration = len(combined) / sr
+
+    # 写回 WAV bytes
+    buf = io.BytesIO()
+    sf.write(buf, combined, sr, format='WAV')
+    buf.seek(0)
+    merged_bytes = buf.read()
+
+    merged_metrics = {
+        "total_time": round(total_tts_time, 3),
+        "audio_duration": round(duration, 3),
+        "rtf": round(total_tts_time / duration, 3) if duration > 0 else 0,
+        "sample_rate": sr,
+        "text_length": len(text),
+    }
+    return merged_bytes, merged_metrics
 
 
 def generate_srt(text: str, audio_duration: float) -> str:
@@ -186,7 +282,8 @@ def save_srt(run_dir: str, filename: str, text: str, duration: float) -> str:
 # HTML 报告生成
 # ---------------------------------------------------------------------------
 def generate_html_report(engine: str, model_info: dict, run_dir: str,
-                         sections: list[dict], start_time: datetime) -> str:
+                         sections: list[dict], start_time: datetime,
+                         init_info: dict | None = None) -> str:
     end_time = datetime.now()
     duration_str = f"{start_time.strftime('%Y-%m-%d %H:%M:%S')} ~ {end_time.strftime('%H:%M:%S')}"
 
@@ -245,6 +342,38 @@ def generate_html_report(engine: str, model_info: dict, run_dir: str,
         ' '.join(f'<span>{c}</span>' for c in capabilities),
         '</div>',
         f'<div style="margin-bottom:12px; font-size:13px; color:#888">预设音色: {", ".join(voices)} &nbsp;|&nbsp; 克隆音色: {", ".join(clone_voices)}</div>',
+    ]
+
+    # 模型初始化信息
+    if init_info:
+        init_status = init_info.get("status", "unknown")
+        init_elapsed = init_info.get("elapsed_seconds", 0)
+        init_restarted = init_info.get("is_restarted", False)
+        init_health = init_info.get("health") or {}
+        init_sr = init_health.get("sample_rate", "?")
+
+        status_color = "#4caf50" if init_status == "already_running" else "#1a73e8" if init_status in ("started", "restarted") else "#e53935"
+        status_text = {
+            "already_running": "已运行",
+            "started": "新启动",
+            "restarted": "重启",
+            "error": "失败",
+        }.get(init_status, init_status)
+
+        h.append('<div style="background:#fff; border-radius:8px; padding:12px 16px; margin:12px 0; box-shadow:0 1px 3px rgba(0,0,0,0.1)">')
+        h.append('<span style="font-weight:600; color:#555">模型初始化</span> &nbsp; ')
+        h.append(f'<span style="display:inline-block; background:{status_color}; color:#fff; padding:1px 8px; border-radius:4px; font-size:12px">{html.escape(status_text)}</span>')
+        if init_restarted:
+            h.append(' <span style="background:#ff9800; color:#fff; padding:1px 8px; border-radius:4px; font-size:12px">已重启</span>')
+        h.append(f' &nbsp; <span style="color:#888; font-size:13px">耗时 {init_elapsed:.1f}s')
+        if init_sr != "?":
+            h.append(f' &nbsp;|&nbsp; 采样率 {init_sr}Hz')
+        h.append('</span>')
+        if init_info.get("error"):
+            h.append(f' <span style="color:#e53935; font-size:13px">{html.escape(init_info["error"])}</span>')
+        h.append('</div>')
+
+    h += [
         # 汇总卡片
         '<div class="summary">',
         f'<div class="summary-card"><div class="label">总测试数</div><div class="value">{total_tests}</div></div>',
@@ -306,6 +435,14 @@ def run(engine: str, test_ids: list[str] | None = None):
         logger.warning("Cannot get model info for '%s', using defaults", engine)
         model_info = {"id": engine, "capabilities": ["tts"], "voices": ["default"], "clone_voices": []}
 
+    # 初始化模型后端
+    init_info = init_model(engine)
+    if init_info.get("error"):
+        logger.error("Model init failed: %s", init_info["error"])
+        sys.exit(1)
+    logger.info("[init_model] status=%s restarted=%s elapsed=%.1fs",
+                init_info["status"], init_info["is_restarted"], init_info["elapsed_seconds"])
+
     capabilities = model_info.get("capabilities", [])
 
     if test_ids is None:
@@ -326,7 +463,7 @@ def run(engine: str, test_ids: list[str] | None = None):
             text = read_test_text(test_id)
             logger.info("[%s] TTS (%d chars)...", test_id, len(text))
             try:
-                audio_bytes, metrics = synthesize(engine, text)
+                audio_bytes, metrics = synthesize_segments(engine, text)
                 wav_file = save_wav(run_dir, test_id, audio_bytes)
                 save_srt(run_dir, test_id, text, metrics["audio_duration"])
                 logger.info("[%s] Done (RTF=%.3f)", test_id, metrics["rtf"])
@@ -400,7 +537,7 @@ def run(engine: str, test_ids: list[str] | None = None):
     # ── 生成报告 ──
     total = sum(len(s.get("rows", [])) for s in sections)
     if total > 0:
-        report_path = generate_html_report(engine, model_info, run_dir, sections, start_time)
+        report_path = generate_html_report(engine, model_info, run_dir, sections, start_time, init_info)
         logger.info("Report: %s", report_path)
 
     logger.info("Done. %d tests. Output: %s", total, run_dir)

@@ -1,0 +1,284 @@
+[
+  {
+    "type": "tts",
+    "title": "基础 TTS 测试",
+    "description": "T02 文本按行分段合成，首段 generation 后续段 voice_clone 保持音色一致",
+    "rows": [
+      {
+        "id": "T02",
+        "text": "这是一个针对 URL 短链服务进行性能基准测试的项目。\n\n目前项目在 src 目录下分为三个版本：v1、v2 和 v3。\n\n其中，v1 采用纯内存数据结构实现，主要用作接口本身的基准测试参照。\nv2 基于本地数据库构建，用于单机版本下的基准性能测试。\nv3 则基于分布式数据库搭建，面向集群场景下的基准性能测试。\n\n三个版本的接口设计基本保持一致。\n\n基准测试代码统一放置在 bench_test 目录下，性能测试使用 Locust 作为压测工具。\n\n需要说明的是，当前版本的所有代码均为 AI 辅助生成，尚未进行个人理解层面的整理。开发过程中遇到错误时，也是将错误信息反馈给 AI 进行修复。目前代码仅保证能够完成基本的测试用例执行。该项目的核心目的，是观察和评估 AI 的代码生成能力。",
+        "audio_file": "T02.wav",
+        "total_time": 311.073,
+        "audio_duration": 58.8,
+        "rtf": 5.29,
+        "segments": 11
+      }
+    ]
+  },
+  {
+    "type": "voice_design",
+    "title": "音色设计测试",
+    "description": "使用 T07_voice_design.csv 中定义的音色描述和文本",
+    "rows": [
+      {
+        "id": "design/v1",
+        "text": "微软（Microsoft）发布了SQL Server 2024，新增对生成式AI的支持",
+        "audio_file": "design_v1.wav",
+        "voice": "专业的中英文混合IT播报男声，吐字清晰，语速稍快，适合科技资讯",
+        "total_time": 10.922,
+        "audio_duration": 6.48,
+        "rtf": 1.686
+      },
+      {
+        "id": "design/v2",
+        "text": "苹果（Apple）推出了iPhone 16 Pro，搭载A18 Pro芯片，支持USB-C",
+        "audio_file": "design_v2.wav",
+        "voice": "专业的中英文混合IT播报女声，声音柔和，语速适中，适合产品发布",
+        "total_time": 11.23,
+        "audio_duration": 7.76,
+        "rtf": 1.447
+      },
+      {
+        "id": "design/v3",
+        "text": "Kubernetes v1.30 对Pod调度机制进行了重大改进，提升了集群效率",
+        "audio_file": "design_v3.wav",
+        "voice": "热情专业的IT技术男声，声音洪亮，充满活力，适合技术分享",
+        "total_time": 9.449,
+        "audio_duration": 6.32,
+        "rtf": 1.495
+      },
+      {
+        "id": "design/v4",
+        "text": "根据Gartner报告，全球云技术（cloud）支出在2025年预计增长20%",
+        "audio_file": "design_v4.wav",
+        "voice": "冷静客观的IT分析女声，声音沉稳，语速均匀，适合行业分析",
+        "total_time": 12.199,
+        "audio_duration": 8.64,
+        "rtf": 1.412
+      },
+      {
+        "id": "design/v5",
+        "text": "针对科技类IT新闻播报场景",
+        "audio_file": "design_v5.wav",
+        "voice": "温柔知性的女性声音，语速适中，适合朗读科技资讯",
+        "total_time": 9.084,
+        "audio_duration": 6.08,
+        "rtf": 1.494
+      },
+      {
+        "id": "design/v6",
+        "text": "今天的天气真好，适合出去走走",
+        "audio_file": "design_v6.wav",
+        "voice": "甜美活泼的少女声音，语速稍快，充满朝气",
+        "total_time": 5.389,
+        "audio_duration": 3.04,
+        "rtf": 1.773
+      },
+      {
+        "id": "design/v7",
+        "text": "该项目预计将在下个季度完成交付",
+        "audio_file": "design_v7.wav",
+        "voice": "沉稳有力的中年男性声音，语速缓慢，充满威严",
+        "total_time": 4.909,
+        "audio_duration": 2.64,
+        "rtf": 1.859
+      },
+      {
+        "id": "design/v8",
+        "text": "以上就是我们今天的全部内容，感谢您的收听",
+        "audio_file": "design_v8.wav",
+        "voice": "标准的男声播音腔，吐字清晰，语速均匀，适合新闻播报",
+        "total_time": 7.87,
+        "audio_duration": 5.04,
+        "rtf": 1.562
+      },
+      {
+        "id": "design/v9",
+        "text": "夜色温柔，月光如水，让人不禁想起远方的亲人",
+        "audio_file": "design_v9.wav",
+        "voice": "温柔磁性的女声，适合播读情感类文章",
+        "total_time": 7.716,
+        "audio_duration": 4.96,
+        "rtf": 1.556
+      },
+      {
+        "id": "design/v10",
+        "text": "球进了！这记三分球真是太漂亮了！",
+        "audio_file": "design_v10.wav",
+        "voice": "活力十足的男声，适合体育赛事解说",
+        "total_time": 7.115,
+        "audio_duration": 4.48,
+        "rtf": 1.588
+      },
+      {
+        "id": "design/v11",
+        "text": "在这片古老的土地上，无数故事等待着我们去发现",
+        "audio_file": "design_v11.wav",
+        "voice": "低沉磁性的男声，适合纪录片旁白",
+        "total_time": 8.16,
+        "audio_duration": 5.28,
+        "rtf": 1.545
+      },
+      {
+        "id": "design/v12",
+        "text": "早上好，今天想吃点什么呢？",
+        "audio_file": "design_v12.wav",
+        "voice": "亲切自然的邻家女声，适合日常对话",
+        "total_time": 5.477,
+        "audio_duration": 3.12,
+        "rtf": 1.755
+      },
+      {
+        "id": "design/v13",
+        "text": "根据相关规定，现将有关事项通知如下",
+        "audio_file": "design_v13.wav",
+        "voice": "严肃庄重的女声，适合政府公告",
+        "total_time": 5.617,
+        "audio_duration": 3.2,
+        "rtf": 1.755
+      },
+      {
+        "id": "design/v14",
+        "text": "小朋友们，今天我们要讲一个关于勇敢的故事",
+        "audio_file": "design_v14.wav",
+        "voice": "欢快愉悦的男声，适合儿童节目",
+        "total_time": 7.962,
+        "audio_duration": 4.96,
+        "rtf": 1.605
+      },
+      {
+        "id": "design/v15",
+        "text": "那是一个风雨交加的夜晚，一切都显得那么诡异",
+        "audio_file": "design_v15.wav",
+        "voice": "低沉沙哑的男声，适合悬疑推理小说",
+        "total_time": 10.638,
+        "audio_duration": 7.12,
+        "rtf": 1.494
+      },
+      {
+        "id": "design/v16",
+        "text": "品味经典，感受非凡",
+        "audio_file": "design_v16.wav",
+        "voice": "优雅从容的女声，适合奢侈品宣传",
+        "total_time": 5.913,
+        "audio_duration": 3.36,
+        "rtf": 1.76
+      },
+      {
+        "id": "design/v17",
+        "text": "夜深了，星星眨着眼睛，月亮也躲进了云层",
+        "audio_file": "design_v17.wav",
+        "voice": "平静温暖的男声，适合睡前故事",
+        "total_time": 9.355,
+        "audio_duration": 6.08,
+        "rtf": 1.539
+      },
+      {
+        "id": "design/v18",
+        "text": "只要我们不放弃，就一定能够实现我们的梦想",
+        "audio_file": "design_v18.wav",
+        "voice": "激昂有力的男声，适合励志演讲",
+        "total_time": 5.796,
+        "audio_duration": 3.28,
+        "rtf": 1.767
+      },
+      {
+        "id": "design/v19",
+        "text": "深呼吸，感受空气进入你的身体",
+        "audio_file": "design_v19.wav",
+        "voice": "温柔舒缓的女声，适合冥想引导",
+        "total_time": 6.809,
+        "audio_duration": 4.0,
+        "rtf": 1.702
+      },
+      {
+        "id": "design/v20",
+        "text": "欢迎来到今天的游戏直播，让我们一起开始这段冒险吧",
+        "audio_file": "design_v20.wav",
+        "voice": "活泼开朗的男声，适合游戏解说",
+        "total_time": 7.186,
+        "audio_duration": 4.16,
+        "rtf": 1.728
+      }
+    ]
+  },
+  {
+    "type": "voice_clone",
+    "title": "语音克隆测试",
+    "description": "使用 T08_voice_clone.csv 中定义的参考音频和文本",
+    "rows": [
+      {
+        "id": "clone/c1",
+        "text": "老子从来就没想刮穷鬼的钱。",
+        "audio_file": "clone_c1.wav",
+        "ref_audio": "县长上任得巧立名目 拉拢豪绅交税捐款.wav",
+        "total_time": 24.426,
+        "audio_duration": 2.96,
+        "rtf": 8.252
+      },
+      {
+        "id": "clone/c2",
+        "text": "不刮穷鬼的钱你收谁的呀？",
+        "audio_file": "clone_c2.wav",
+        "ref_audio": "老子从来就没想刮穷鬼的钱.wav",
+        "total_time": 23.537,
+        "audio_duration": 2.72,
+        "rtf": 8.653
+      },
+      {
+        "id": "clone/c3",
+        "text": "谁有钱挣谁的！",
+        "audio_file": "clone_c3.wav",
+        "ref_audio": "县长上任得巧立名目 拉拢豪绅交税捐款.wav",
+        "total_time": 44.265,
+        "audio_duration": 14.72,
+        "rtf": 3.007
+      },
+      {
+        "id": "clone/c4",
+        "text": "我好不容易劫了趟火车  当了县长！我还得拉拢豪绅 还得巧立名目 还得看他的脸色！我不成跪着要饭的了吗？",
+        "audio_file": "clone_c4.wav",
+        "ref_audio": "县长上任得巧立名目 拉拢豪绅交税捐款.wav",
+        "total_time": 40.849,
+        "audio_duration": 9.04,
+        "rtf": 4.519
+      },
+      {
+        "id": "clone/c5",
+        "text": "那你要这么说，你还真就是跪着要饭的了！",
+        "audio_file": "clone_c5.wav",
+        "ref_audio": "老子从来就没想刮穷鬼的钱.wav",
+        "total_time": 20.204,
+        "audio_duration": 4.24,
+        "rtf": 4.765
+      },
+      {
+        "id": "clone/c6",
+        "text": "买官当县长还真就是跪着要饭的！！就这 多少人想跪还没这门路呢！",
+        "audio_file": "clone_c6.wav",
+        "ref_audio": "老子从来就没想刮穷鬼的钱.wav",
+        "total_time": 24.688,
+        "audio_duration": 6.32,
+        "rtf": 3.906
+      },
+      {
+        "id": "clone/c7",
+        "text": "我问问你 我为什么要上山当土匪？我就是腿脚不利索 跪不下去！",
+        "audio_file": "clone_c7.wav",
+        "ref_audio": "县长上任得巧立名目 拉拢豪绅交税捐款.wav",
+        "total_time": 24.657,
+        "audio_duration": 6.16,
+        "rtf": 4.003
+      },
+      {
+        "id": "clone/c8",
+        "text": "你还真是个土匪啊！",
+        "audio_file": "clone_c8.wav",
+        "ref_audio": "老子从来就没想刮穷鬼的钱.wav",
+        "total_time": 15.227,
+        "audio_duration": 3.44,
+        "rtf": 4.426
+      }
+    ]
+  }
+]

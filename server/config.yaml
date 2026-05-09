@@ -8,5 +8,7 @@ port: 9000
 engines:
   - name: VoxCPM2
     conda_env: voxcpm
+  - name: MOSS-TTSD
+    conda_env: moss-tts
   # - name: qwen-tts
   #   conda_env: qwen-tts
