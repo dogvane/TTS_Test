@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>TTS 评测报告 - qwen3-tts</title>
+<style>
+body { font-family: -apple-system, "Microsoft YaHei", sans-serif; max-width: 960px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+h1 { color: #333; border-bottom: 2px solid #4a9eff; padding-bottom: 8px; }
+h2 { color: #555; margin-top: 32px; border-left: 4px solid #4a9eff; padding-left: 10px; }
+h3 { color: #666; }
+.meta { color: #888; font-size: 14px; margin-bottom: 20px; }
+.summary { display: flex; gap: 16px; margin: 16px 0; }
+.summary-card { background: white; border-radius: 8px; padding: 16px; flex: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.summary-card .label { color: #888; font-size: 13px; }
+.summary-card .value { font-size: 24px; font-weight: bold; color: #333; }
+.cap-list span { display: inline-block; background: #e8f4ff; color: #1a73e8; padding: 2px 8px; border-radius: 4px; margin: 2px; font-size: 13px; }
+.test-item { background: white; border-radius: 8px; padding: 16px; margin: 12px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.test-item .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.test-item .id { font-weight: bold; color: #333; }
+.test-item .metrics { font-size: 13px; color: #888; }
+.test-item .text { background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 8px 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+audio { width: 100%; margin-top: 8px; }
+.voice-tag { display: inline-block; background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-left: 8px; }
+.clone-ref { font-size: 13px; color: #666; margin: 4px 0; }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; background: white; }
+th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+th { background: #fafafa; color: #666; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>TTS 评测报告</h1>
+<div class="meta">引擎: <strong>qwen3-tts</strong> &nbsp;|&nbsp; 2026-05-10 12:49:16 ~ 13:14:15</div>
+<div style="margin-bottom:12px">能力: 
+<span>tts</span> <span>voice_clone</span> <span>voice_design</span>
+</div>
+<div style="margin-bottom:12px; font-size:13px; color:#888">预设音色: Vivian, Serena, Uncle_Fu, Dylan, Eric, Ryan, Aiden, Ono_Anna, Sohee &nbsp;|&nbsp; 克隆音色: </div>
+<div style="background:#fff; border-radius:8px; padding:12px 16px; margin:12px 0; box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+<span style="font-weight:600; color:#555">模型初始化</span> &nbsp; 
+<span style="display:inline-block; background:#1a73e8; color:#fff; padding:1px 8px; border-radius:4px; font-size:12px">新启动</span>
+ &nbsp; <span style="color:#888; font-size:13px">耗时 6.3s
+ &nbsp;|&nbsp; 采样率 24000Hz
+</span>
+</div>
+<div class="summary">
+<div class="summary-card"><div class="label">总测试数</div><div class="value">29</div></div>
+<div class="summary-card"><div class="label">平均 RTF</div><div class="value">7.500</div></div>
+<div class="summary-card"><div class="label">平均耗时</div><div class="value">51.7s</div></div>
+<div class="summary-card"><div class="label">总音频时长</div><div class="value">203.6s</div></div>
+</div>
+<h2>基础 TTS 测试</h2>
+<p style="color:#888; font-size:14px">使用 default 音色合成所有测试文本</p>
+<div class="test-item">
+<div class="header"><span class="id">T02</span><span class="metrics">耗时 513.253s &nbsp;|&nbsp; 音频 68.96s &nbsp;|&nbsp; RTF 7.443</span></div>
+<div class="text">这是一个针对 URL 短链服务进行性能基准测试的项目。
+
+目前项目在 src 目录下分为三个版本：v1、v2 和 v3。
+
+其中，v1 采用纯内存数据结构实现，主要用作接口本身的基准测试参照。
+v2 基于本地数据库构建，用于单机版本下的基准性能测试。
+v3 则基于分布式数据库搭建，面向集群场景下的基准性能测试。
+
+三个版本的接口设计基本保持一致。
+
+基准测试代码统一放置在 bench_test 目录下，性能测试使用 Locust 作为压测工具。
+
+需要说明的是，当前版本的所有代码均为 AI 辅助生成，尚未进行个人理解层面的整理。开发过程中遇到错误时，也是将错误信息反馈给 AI 进行修复。目前代码仅保证能够完成基本的测试用例执行。该项目的核心目的，是观察和评估 AI 的代码生成能力。</div>
+
+<audio controls src="T02.wav"></audio>
+</div>
+<h2>音色设计测试</h2>
+<p style="color:#888; font-size:14px">使用 T07_voice_design.csv 中定义的音色描述和文本</p>
+<div class="test-item">
+<div class="header"><span class="id">design/v1<span class="voice-tag">专业的中英文混合IT播报男声，吐字清晰，语速稍快，适合科技资讯</span></span><span class="metrics">耗时 119.94s &nbsp;|&nbsp; 音频 8.08s &nbsp;|&nbsp; RTF 14.844</span></div>
+<div class="text">微软（Microsoft）发布了SQL Server 2024，新增对生成式AI的支持</div>
+
+<audio controls src="design_v1.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v2<span class="voice-tag">专业的中英文混合IT播报女声，声音柔和，语速适中，适合产品发布</span></span><span class="metrics">耗时 56.44s &nbsp;|&nbsp; 音频 8.96s &nbsp;|&nbsp; RTF 6.299</span></div>
+<div class="text">苹果（Apple）推出了iPhone 16 Pro，搭载A18 Pro芯片，支持USB-C</div>
+
+<audio controls src="design_v2.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v3<span class="voice-tag">热情专业的IT技术男声，声音洪亮，充满活力，适合技术分享</span></span><span class="metrics">耗时 47.509s &nbsp;|&nbsp; 音频 7.92s &nbsp;|&nbsp; RTF 5.999</span></div>
+<div class="text">Kubernetes v1.30 对Pod调度机制进行了重大改进，提升了集群效率</div>
+
+<audio controls src="design_v3.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v4<span class="voice-tag">冷静客观的IT分析女声，声音沉稳，语速均匀，适合行业分析</span></span><span class="metrics">耗时 49.81s &nbsp;|&nbsp; 音频 6.72s &nbsp;|&nbsp; RTF 7.412</span></div>
+<div class="text">根据Gartner报告，全球云技术（cloud）支出在2025年预计增长20%</div>
+
+<audio controls src="design_v4.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v5<span class="voice-tag">温柔知性的女性声音，语速适中，适合朗读科技资讯</span></span><span class="metrics">耗时 19.939s &nbsp;|&nbsp; 音频 2.64s &nbsp;|&nbsp; RTF 7.553</span></div>
+<div class="text">针对科技类IT新闻播报场景</div>
+
+<audio controls src="design_v5.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v6<span class="voice-tag">甜美活泼的少女声音，语速稍快，充满朝气</span></span><span class="metrics">耗时 17.761s &nbsp;|&nbsp; 音频 2.64s &nbsp;|&nbsp; RTF 6.728</span></div>
+<div class="text">今天的天气真好，适合出去走走</div>
+
+<audio controls src="design_v6.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v7<span class="voice-tag">沉稳有力的中年男性声音，语速缓慢，充满威严</span></span><span class="metrics">耗时 36.751s &nbsp;|&nbsp; 音频 5.52s &nbsp;|&nbsp; RTF 6.658</span></div>
+<div class="text">该项目预计将在下个季度完成交付</div>
+
+<audio controls src="design_v7.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v8<span class="voice-tag">标准的男声播音腔，吐字清晰，语速均匀，适合新闻播报</span></span><span class="metrics">耗时 31.447s &nbsp;|&nbsp; 音频 4.8s &nbsp;|&nbsp; RTF 6.551</span></div>
+<div class="text">以上就是我们今天的全部内容，感谢您的收听</div>
+
+<audio controls src="design_v8.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v9<span class="voice-tag">温柔磁性的女声，适合播读情感类文章</span></span><span class="metrics">耗时 36.838s &nbsp;|&nbsp; 音频 6.08s &nbsp;|&nbsp; RTF 6.059</span></div>
+<div class="text">夜色温柔，月光如水，让人不禁想起远方的亲人</div>
+
+<audio controls src="design_v9.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v10<span class="voice-tag">活力十足的男声，适合体育赛事解说</span></span><span class="metrics">耗时 17.143s &nbsp;|&nbsp; 音频 2.88s &nbsp;|&nbsp; RTF 5.952</span></div>
+<div class="text">球进了！这记三分球真是太漂亮了！</div>
+
+<audio controls src="design_v10.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v11<span class="voice-tag">低沉磁性的男声，适合纪录片旁白</span></span><span class="metrics">耗时 36.219s &nbsp;|&nbsp; 音频 6.24s &nbsp;|&nbsp; RTF 5.804</span></div>
+<div class="text">在这片古老的土地上，无数故事等待着我们去发现</div>
+
+<audio controls src="design_v11.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v12<span class="voice-tag">亲切自然的邻家女声，适合日常对话</span></span><span class="metrics">耗时 12.152s &nbsp;|&nbsp; 音频 2.08s &nbsp;|&nbsp; RTF 5.842</span></div>
+<div class="text">早上好，今天想吃点什么呢？</div>
+
+<audio controls src="design_v12.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v13<span class="voice-tag">严肃庄重的女声，适合政府公告</span></span><span class="metrics">耗时 20.412s &nbsp;|&nbsp; 音频 3.52s &nbsp;|&nbsp; RTF 5.799</span></div>
+<div class="text">根据相关规定，现将有关事项通知如下</div>
+
+<audio controls src="design_v13.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v14<span class="voice-tag">欢快愉悦的男声，适合儿童节目</span></span><span class="metrics">耗时 19.768s &nbsp;|&nbsp; 音频 3.36s &nbsp;|&nbsp; RTF 5.883</span></div>
+<div class="text">小朋友们，今天我们要讲一个关于勇敢的故事</div>
+
+<audio controls src="design_v14.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v15<span class="voice-tag">低沉沙哑的男声，适合悬疑推理小说</span></span><span class="metrics">耗时 28.876s &nbsp;|&nbsp; 音频 4.8s &nbsp;|&nbsp; RTF 6.016</span></div>
+<div class="text">那是一个风雨交加的夜晚，一切都显得那么诡异</div>
+
+<audio controls src="design_v15.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v16<span class="voice-tag">优雅从容的女声，适合奢侈品宣传</span></span><span class="metrics">耗时 20.47s &nbsp;|&nbsp; 音频 3.52s &nbsp;|&nbsp; RTF 5.815</span></div>
+<div class="text">品味经典，感受非凡</div>
+
+<audio controls src="design_v16.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v17<span class="voice-tag">平静温暖的男声，适合睡前故事</span></span><span class="metrics">耗时 44.086s &nbsp;|&nbsp; 音频 7.68s &nbsp;|&nbsp; RTF 5.74</span></div>
+<div class="text">夜深了，星星眨着眼睛，月亮也躲进了云层</div>
+
+<audio controls src="design_v17.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v18<span class="voice-tag">激昂有力的男声，适合励志演讲</span></span><span class="metrics">耗时 30.093s &nbsp;|&nbsp; 音频 3.92s &nbsp;|&nbsp; RTF 7.677</span></div>
+<div class="text">只要我们不放弃，就一定能够实现我们的梦想</div>
+
+<audio controls src="design_v18.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v19<span class="voice-tag">温柔舒缓的女声，适合冥想引导</span></span><span class="metrics">耗时 32.734s &nbsp;|&nbsp; 音频 5.52s &nbsp;|&nbsp; RTF 5.93</span></div>
+<div class="text">深呼吸，感受空气进入你的身体</div>
+
+<audio controls src="design_v19.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">design/v20<span class="voice-tag">活泼开朗的男声，适合游戏解说</span></span><span class="metrics">耗时 29.52s &nbsp;|&nbsp; 音频 4.8s &nbsp;|&nbsp; RTF 6.15</span></div>
+<div class="text">欢迎来到今天的游戏直播，让我们一起开始这段冒险吧</div>
+
+<audio controls src="design_v20.wav"></audio>
+</div>
+<h2>语音克隆测试</h2>
+<p style="color:#888; font-size:14px">使用 T08_voice_clone.csv 中定义的参考音频和文本</p>
+<div class="test-item">
+<div class="header"><span class="id">clone/c1</span><span class="metrics">耗时 83.846s &nbsp;|&nbsp; 音频 2.64s &nbsp;|&nbsp; RTF 31.76</span></div>
+<div class="text">老子从来就没想刮穷鬼的钱。</div>
+<div class="clone-ref">参考音频: 县长上任得巧立名目 拉拢豪绅交税捐款.wav</div>
+<audio controls src="clone_c1.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">clone/c2</span><span class="metrics">耗时 13.054s &nbsp;|&nbsp; 音频 2.16s &nbsp;|&nbsp; RTF 6.044</span></div>
+<div class="text">不刮穷鬼的钱你收谁的呀？</div>
+<div class="clone-ref">参考音频: 老子从来就没想刮穷鬼的钱.wav</div>
+<audio controls src="clone_c2.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">clone/c3</span><span class="metrics">耗时 8.566s &nbsp;|&nbsp; 音频 1.44s &nbsp;|&nbsp; RTF 5.948</span></div>
+<div class="text">谁有钱挣谁的！</div>
+<div class="clone-ref">参考音频: 县长上任得巧立名目 拉拢豪绅交税捐款.wav</div>
+<audio controls src="clone_c3.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">clone/c4</span><span class="metrics">耗时 64.234s &nbsp;|&nbsp; 音频 10.08s &nbsp;|&nbsp; RTF 6.372</span></div>
+<div class="text">我好不容易劫了趟火车  当了县长！我还得拉拢豪绅 还得巧立名目 还得看他的脸色！我不成跪着要饭的了吗？</div>
+<div class="clone-ref">参考音频: 县长上任得巧立名目 拉拢豪绅交税捐款.wav</div>
+<audio controls src="clone_c4.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">clone/c5</span><span class="metrics">耗时 17.41s &nbsp;|&nbsp; 音频 2.96s &nbsp;|&nbsp; RTF 5.882</span></div>
+<div class="text">那你要这么说，你还真就是跪着要饭的了！</div>
+<div class="clone-ref">参考音频: 老子从来就没想刮穷鬼的钱.wav</div>
+<audio controls src="clone_c5.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">clone/c6</span><span class="metrics">耗时 42.78s &nbsp;|&nbsp; 音频 5.6s &nbsp;|&nbsp; RTF 7.639</span></div>
+<div class="text">买官当县长还真就是跪着要饭的！！就这 多少人想跪还没这门路呢！</div>
+<div class="clone-ref">参考音频: 老子从来就没想刮穷鬼的钱.wav</div>
+<audio controls src="clone_c6.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">clone/c7</span><span class="metrics">耗时 37.739s &nbsp;|&nbsp; 音频 6.48s &nbsp;|&nbsp; RTF 5.824</span></div>
+<div class="text">我问问你 我为什么要上山当土匪？我就是腿脚不利索 跪不下去！</div>
+<div class="clone-ref">参考音频: 县长上任得巧立名目 拉拢豪绅交税捐款.wav</div>
+<audio controls src="clone_c7.wav"></audio>
+</div>
+<div class="test-item">
+<div class="header"><span class="id">clone/c8</span><span class="metrics">耗时 9.417s &nbsp;|&nbsp; 音频 1.6s &nbsp;|&nbsp; RTF 5.886</span></div>
+<div class="text">你还真是个土匪啊！</div>
+<div class="clone-ref">参考音频: 老子从来就没想刮穷鬼的钱.wav</div>
+<audio controls src="clone_c8.wav"></audio>
+</div>
+</body></html>

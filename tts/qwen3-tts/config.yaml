@@ -1,0 +1,34 @@
+# Qwen3-TTS 引擎配置
+
+# webapi 地址（由网关自动启动，无需手动运行）
+backend_url: "http://localhost:8005"
+
+# webapi 端口（网关根据此端口自动启动后端）
+webapi_port: 8005
+
+# 请求超时（秒）
+timeout: 300
+
+# 音频参数
+sample_rate: 24000
+
+# 模型路径（WSL2 路径）
+# 三种模型按需懒加载，不同时占用显存
+custom_voice_model: "/mnt/g/ai/TTS/qwen3_tts/models/Qwen3-TTS-12Hz-1.7B-CustomVoice"
+voice_design_model: "/mnt/g/ai/TTS/qwen3_tts/models/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
+voice_clone_model: "/mnt/g/ai/TTS/qwen3_tts/models/Qwen3-TTS-12Hz-1.7B-Base"
+
+# 预设音色（Qwen3-TTS CustomVoice 内置 9 种音色）
+voices:
+  - Vivian
+  - Serena
+  - Uncle_Fu
+  - Dylan
+  - Eric
+  - Ryan
+  - Aiden
+  - Ono_Anna
+  - Sohee
+
+# 推理设备
+device: "cuda"
