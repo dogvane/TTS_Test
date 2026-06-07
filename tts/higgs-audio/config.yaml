@@ -1,0 +1,21 @@
+# Higgs Audio v3 TTS 引擎配置
+# Docker 方式启动，通过 SGLang-Omni 服务提供 OpenAI 兼容接口
+# 无需 conda 环境，无需网关自动启动后端
+
+# webapi 地址（Docker 容器已手动启动，直接访问）
+backend_url: "http://localhost:8001"
+
+# webapi 端口（Docker 容器映射端口）
+webapi_port: 8001
+
+# 请求超时（秒）
+timeout: 300
+
+# 音频参数
+sample_rate: 24000
+
+# Docker 模式标记（网关不会尝试用 conda 启动此引擎）
+docker_mode: true
+
+# 推理设备（Docker 容器内使用 GPU）
+device: "cuda"
