@@ -6,39 +6,26 @@
 ## 1. 总览
 
 ```
-┌─────────────┐    HTTP     ┌──────────────────┐   conda子进程   ┌─────────────────┐
-│ client      │ ──────────→ │ server/main.py   │ ──────────────→ │ tts/{engine}/   │
-│ runner.py   │  :9000      │ (网关)            │   :800x        │ webapi.py       │
-└─────────────┘             └──────────────────┘                └─────────────────┘
-                            转发请求到对应后端
-                            按需启动/切换 conda 环境
+┌─────────────┐    HTTP     ┌─────────────────┐
+│ client      │ ──────────→ │ tts/{engine}/   │
+│ runner.py   │  :8002      │ webapi.py       │
+└─────────────┘             └─────────────────┘
 ```
 
-- **网关** (`server/main.py`) 接收请求后，按 `model` 字段转发到对应的后端 webapi
-- **后端** (`tts/{engine}/webapi.py`) 负责实际的模型推理
-- **Conda 隔离**：每个引擎在各自的 conda 环境子进程中运行，同一时刻只有一个引擎的 conda 进程存活
+- **客户端** (`client/runner.py`) 按 `client/config.yaml` 中的 base_url 直连引擎，统一端口 8002
+- **后端** (`tts/{engine}/webapi.py`) 负责实际的模型推理，在各自 conda/venv/Docker 环境中手动启动
+- **同一时刻只运行一个引擎**（统一端口），切换引擎前先停掉前一个
 - 所有接口使用 JSON 请求体、二进制音频响应
 
-### 1.1 Conda 环境管理机制
+### 1.1 引擎启动方式
 
-网关为每个引擎维护独立的 conda 环境子进程：
+各引擎在各自环境中手动启动 webapi.py（详见各引擎目录下的 readme.md）：
 
-```
-请求 model=VoxCPM2
-  → ensure_backend("VoxCPM2")
-    → 活跃引擎 == VoxCPM2 且存活？ → 直接复用
-    → 活跃引擎 == 其他引擎？   → 先停旧引擎，再启新引擎
-    → 无活跃引擎？             → 启动新引擎
-  → 正常调用 adapter.synthesize()
-```
+- **WSL2 + conda**（VoxCPM2 / MOSS-TTSD / qwen3-tts）：`conda activate <env>` 后 `python -m tts.<Engine>.webapi`
+- **Windows venv**（IndexTTS25）：按 `tts/IndexTTS25/readme.md` 以 venv 启动
+- **Docker**（higgs-audio）：容器端口映射到宿主 8002，本目录 webapi 仅做健康检查代理
 
-关键行为：
-
-- **首次请求**：网关通过 `conda info --json` 查找对应 conda 环境的 python 路径，启动 webapi.py 子进程
-- **连续同引擎请求**：直接复用已启动的 conda 进程，不重启
-- **切换引擎请求**：先停止旧引擎的 conda 进程（terminate → wait → kill），再启动新引擎
-- **进程健康检查**：通过 `/health` 端点轮询确认后端就绪，超时 600 秒
-- **网关关闭**：自动清理所有 conda 子进程
+统一监听 8002 端口，**同一时刻只运行一个引擎**，切换引擎前先停掉前一个。
 
 ## 2. API 端点
 
@@ -93,13 +80,7 @@
 }
 ```
 
-### 2.4 GET `/v1/models`
-
-查询可用模型（仅网关提供）。
-
-### 2.5 GET `/v1/models/{model_id}/capabilities`
-
-查询单个模型能力（仅网关提供）。
+> 能力声明不再通过 HTTP 接口查询，由 `client/config.yaml` 中每个引擎的 `capabilities` 列表静态声明。
 
 ## 3. 请求字段定义
 
@@ -141,15 +122,14 @@
 
 ```
 1. 客户端发送 reference_audio (Base64) + prompt_text + input
-2. 网关透传到后端 webapi
-3. 后端使用参考音频 + 文本进行语音克隆合成
+2. webapi 使用参考音频 + 文本进行语音克隆合成
 ```
 
-`reference_wav_path` 仅在后端本地有文件时使用，不应从外部网关传入。
+`reference_wav_path` 仅在后端本地有文件时使用，外部调用应使用 `reference_audio` (Base64)。
 
 ## 4. 能力声明
 
-每个 adapter 通过 `capabilities` 列表声明支持的功能：
+每个引擎在 `client/config.yaml` 中通过 `capabilities` 列表声明支持的功能：
 
 | 能力           | 说明                     | 必需 |
 | -------------- | ------------------------ | :--: |
@@ -161,58 +141,21 @@
 
 ## 5. 新引擎接入指南
 
-创建新的 TTS 引擎适配器，按以下步骤操作：
+按以下步骤接入新的 TTS 引擎：
 
 ### 5.1 创建目录结构
 
 ```
 tts/YourEngine/
 ├── __init__.py          # 可为空
-├── adapter.py           # 适配器（网关调用）
 ├── config.yaml          # 配置文件
 ├── webapi.py            # 后端 API 服务
+├── readme.md            # 启动方式说明
 └── voices/              # 参考音频目录
     └── readme.md
 ```
 
-### 5.2 实现 adapter.py
-
-继承 `server.base_adapter.BaseAdapter`，实现以下方法：
-
-```python
-from server.base_adapter import BaseAdapter
-
-class YourEngineAdapter(BaseAdapter):
-    name = "YourEngine"
-    sample_rate = 44100
-    capabilities = ["tts", "voice_clone"]
-    voices = ["default"]
-    clone_voices = []
-
-    def __init__(self, config_path=None):
-        # 读取 config.yaml
-        ...
-
-    def synthesize(self, text, voice="default",
-                   reference_wav_bytes=None, prompt_text=None,
-                   cfg_value=0.7, inference_timesteps=10, **kwargs):
-        # 调用后端 webapi 的 /v1/audio/speech
-        # 返回 numpy float32 数组
-        ...
-
-    def synthesize_streaming(self, text, voice="default",
-                             reference_wav_bytes=None, prompt_text=None,
-                             cfg_value=0.7, inference_timesteps=10, **kwargs):
-        # 调用后端 webapi 的 /v1/audio/speech/stream
-        # yield numpy float32 chunk
-        ...
-
-    def health_check(self):
-        # 调用 GET /health
-        ...
-```
-
-### 5.3 实现 webapi.py
+### 5.2 实现 webapi.py
 
 必须实现以下端点：
 
@@ -253,37 +196,34 @@ def health():
     return {"status": "ok", "model": "YourEngine", "sample_rate": 44100} # sample_rate 基于tts模型自身的来返回
 ```
 
-### 5.4 编写 config.yaml
+### 5.3 编写 config.yaml
 
 ```yaml
-backend_url: "http://localhost:8003" # 后端地址
-webapi_port: 8003 # 端口
+backend_url: "http://localhost:8002" # webapi 地址
+webapi_port: 8002 # 端口（统一 8002）
 timeout: 120 # 超时(秒)
 sample_rate: 44100 # 采样率  基于tts模型自身的来返回
 model_path: "/path/to/model/weights" # 模型权重
 source_path: "/path/to/source/code" # 源码路径
 ```
 
-### 5.5 注册引擎
+### 5.4 注册引擎
 
-在 `server/config.yaml` 中添加，指定引擎名和对应的 conda 环境名：
+在 `client/config.yaml` 中添加引擎项，声明引擎名、model id 与能力：
 
 ```yaml
 engines:
-  - name: YourEngine
-    conda_env: your_conda_env
+  your-engine:
+    model: YourEngine
+    base_url: http://localhost:8002
+    engine_dir: tts/YourEngine
+    capabilities: [tts, voice_clone]
 ```
 
-- `name`：引擎目录名，对应 `tts/` 下的子目录
-- `conda_env`：该引擎依赖的 conda 环境名，网关按需在此环境中启动 webapi 子进程
+- `model`：请求体中的 model id，需与 webapi 的 `/health` 返回的 `model` 一致
+- `capabilities`：决定 runner 自动执行哪些测试段落
 
-确保 conda 环境已创建且安装了 webapi.py 所需的全部依赖：
-
-```bash
-conda env list  # 确认环境存在
-conda activate your_conda_env
-pip install fastapi uvicorn ...  # 安装依赖
-```
+之后按引擎依赖准备环境（conda / venv / Docker），确保 webapi.py 所需依赖齐全。
 
 ## 6. 错误响应
 

@@ -6,7 +6,7 @@
 启动（Windows，使用 IndexTTS 的 .venv）：
     cd O:\\ai\\TTS\\TTS_Test
     set PYTHONPATH=O:\\ai\\TTS\\TTS_Test;G:\\ai\\TTS\\index-tts\\IndexTTS-2.5\\index-tts
-    python -m tts.IndexTTS25.webapi --port 8006
+    python -m tts.IndexTTS25.webapi --port 8002
 
 能力：
     - tts          基础合成（使用默认参考音频）
@@ -263,7 +263,7 @@ def _cleanup(paths: list[str]):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run IndexTTS 2.5 Web API")
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8006)
+    parser.add_argument("--port", type=int, default=8002)
     args, _ = parser.parse_known_args()
     import uvicorn
     uvicorn.run(app, host=args.host, port=args.port)

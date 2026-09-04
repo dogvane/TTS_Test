@@ -13,9 +13,7 @@
 
 ## Conda 环境
 
-```
-conda_env: moss-tts
-```
+conda 环境名：`moss-tts`。
 
 模型代码和权重位于 `G:\ai\TTS\MOSS-TTSD\`，在 WSL2 下运行，路径自动转换为 `/mnt/g/` 前缀。
 
@@ -24,7 +22,6 @@ conda_env: moss-tts
 ```
 tts/MOSS-TTSD/
 ├── __init__.py
-├── adapter.py       # 网关适配器
 ├── webapi.py        # FastAPI 后端服务
 ├── config.yaml      # 引擎配置
 ├── readme.md        # 本文件
@@ -35,39 +32,22 @@ tts/MOSS-TTSD/
 
 ## 启动方法
 
-### 通过网关（推荐）
-
-网关会按需自动启动后端，无需手动操作：
-
-```bash
-cd /mnt/o/ai/TTS/TTS_Test
-python -m server.main
-```
-
-### 手动启动后端
-
 ```bash
 conda activate moss-tts
 cd /mnt/o/ai/TTS/TTS_Test
-python -m tts.MOSS-TTSD.webapi --port 8004
+python -m tts.MOSS-TTSD.webapi
 ```
 
-### 通过 init_model 接口预热
-
-```bash
-curl -X POST http://localhost:9000/v1/init_model \
-  -H "Content-Type: application/json" \
-  -d '{"model": "MOSS-TTSD"}'
-```
+默认监听统一端口 8002（可用 `--port` 覆盖）。
 
 ## 调用方法
 
-以下示例直接调用 webapi 后端（端口 8004），用于单独测试本引擎。通过网关调用时改为端口 9000 并加上 `"model": "MOSS-TTSD"` 字段即可。
+以下示例直接调用 webapi 后端（统一端口 8002）。
 
 ### 基础 TTS
 
 ```bash
-curl -X POST http://localhost:8004/v1/audio/speech \
+curl -X POST http://localhost:8002/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MOSS-TTSD",
@@ -83,7 +63,7 @@ curl -X POST http://localhost:8004/v1/audio/speech \
 文本中使用 `[S1]`-`[S5]` 标签指定说话人：
 
 ```bash
-curl -X POST http://localhost:8004/v1/audio/speech \
+curl -X POST http://localhost:8002/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MOSS-TTSD",
@@ -116,7 +96,7 @@ with open('/tmp/clone_req.json', 'w') as f:
     json.dump(body, f)
 "
 
-curl -X POST http://localhost:8004/v1/audio/speech \
+curl -X POST http://localhost:8002/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d @/tmp/clone_req.json \
   --output clone.wav
@@ -127,7 +107,7 @@ curl -X POST http://localhost:8004/v1/audio/speech \
 通过 `instruction` 字段描述想要的音色，无需参考音频：
 
 ```bash
-curl -X POST http://localhost:8004/v1/audio/speech \
+curl -X POST http://localhost:8002/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MOSS-TTSD",
@@ -143,7 +123,7 @@ VoiceGenerator 官方推荐参数：`temperature=1.5, top_p=0.6`（有 instructi
 ### 推理参数调整
 
 ```bash
-curl -X POST http://localhost:8004/v1/audio/speech \
+curl -X POST http://localhost:8002/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
     "model": "MOSS-TTSD",
@@ -166,7 +146,7 @@ curl -X POST http://localhost:8004/v1/audio/speech \
 ## 健康检查
 
 ```bash
-curl http://localhost:8004/health
+curl http://localhost:8002/health
 ```
 
 返回示例：

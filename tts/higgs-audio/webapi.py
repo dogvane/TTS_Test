@@ -60,6 +60,6 @@ def health():
 if __name__ == "__main__":
     import uvicorn
     parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=cfg.get("webapi_port", 8001))
+    parser.add_argument("--port", type=int, default=cfg.get("webapi_port", 8002))
     args = parser.parse_args()
     uvicorn.run(app, host="0.0.0.0", port=args.port)

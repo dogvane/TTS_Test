@@ -1,10 +1,10 @@
 # VoxCPM2 引擎配置
 
-# webapi 地址（由网关自动启动，无需手动运行）
-backend_url: "http://localhost:8000"
+# webapi 地址
+backend_url: "http://localhost:8002"
 
-# webapi 端口（网关根据此端口自动启动后端）
-webapi_port: 8000
+# webapi 端口
+webapi_port: 8002
 
 # 请求超时（秒）
 timeout: 120

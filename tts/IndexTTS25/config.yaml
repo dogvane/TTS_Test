@@ -10,14 +10,14 @@
 #   cd O:\ai\TTS\TTS_Test
 #   .venv\Scripts\python.exe  # 需为 IndexTTS 的 venv
 #   set PYTHONPATH=O:\ai\TTS\TTS_Test;G:\ai\TTS\index-tts\IndexTTS-2.5\index-tts
-#   python -m tts.IndexTTS25.webapi --port 8006
+#   python -m tts.IndexTTS25.webapi --port 8002
 # 或在 WSL2 中直接访问已启动的 Windows 后端（localhost 互通）。
 
 # webapi 地址（外部独立启动，网关直接访问）
-backend_url: "http://localhost:8006"
+backend_url: "http://localhost:8002"
 
 # webapi 端口（仅用于 /health 探活与 init_model 的端口匹配）
-webapi_port: 8006
+webapi_port: 8002
 
 # 请求超时（秒）
 timeout: 300

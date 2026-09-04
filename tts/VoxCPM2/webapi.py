@@ -4,7 +4,7 @@
 
 启动:
     cd O:\ai\TTS\TTS_Test
-    python -m tts.VoxCPM2.webapi --port 8000
+    python -m tts.VoxCPM2.webapi --port 8002
 """
 
 import io
@@ -205,6 +205,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run VoxCPM2 TTS Web API")
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--port", type=int, default=8002)
     args, _ = parser.parse_known_args()
     uvicorn.run(app, host=args.host, port=args.port)

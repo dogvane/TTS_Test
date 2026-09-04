@@ -10,7 +10,7 @@
 启动:
     conda activate qwen3-tts
     cd /mnt/o/ai/TTS/TTS_Test
-    python -m tts.qwen3-tts.webapi --port 8005
+    python -m tts.qwen3-tts.webapi --port 8002
 
 注意: 本文件在 WSL2 conda 环境中运行，路径使用 /mnt/ 前缀。
 """
@@ -492,6 +492,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run Qwen3-TTS Web API")
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8005)
+    parser.add_argument("--port", type=int, default=8002)
     args, _ = parser.parse_known_args()
     uvicorn.run(app, host=args.host, port=args.port)

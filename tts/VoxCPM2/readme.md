@@ -15,10 +15,10 @@ conda activate voxcpm
 cd /mnt/o/ai/TTS/TTS_Test
 ```
 
-2. **启动服务**（网关会自动拉起 VoxCPM2 后端，端口 8000 + 网关 9000）
+2. **启动服务**（统一端口 8002）
 
 ```bash
-python -m server.main
+python -m tts.VoxCPM2.webapi
 ```
 
 3. **运行评测**

@@ -6,15 +6,15 @@
 
 ## 参测 TTS 引擎
 
-| 引擎（model id） | 目录 | 环境 | 能力 | 说明 |
-|------|------|------|------|------|
-| VoxCPM2 | tts/VoxCPM2/ | WSL2 + conda(voxcpm) | tts / voice_design / voice_clone / streaming | 扩散模型，音色设计强 |
-| MOSS-TTSD | tts/MOSS-TTSD/ | WSL2 + conda(moss-tts) | tts / voice_clone / voice_design | 双模型路由（TTSD + VoiceGenerator） |
-| qwen3-tts | tts/qwen3-tts/ | WSL2 + conda(qwen3-tts) | tts / voice_design / voice_clone | 9 种预设音色 |
-| higgs-audio | tts/higgs-audio/ | Docker（外部后端） | tts / voice_clone | SGLang-Omni，外部 HTTP |
-| IndexTTS2 | tts/IndexTTS25/ | **Windows venv**（外部后端） | tts / voice_clone / **emotion** / streaming | 情绪表达 + 时长控制 + 零样本克隆 |
+| 引擎名（`--engine`） | model id | 目录 | 环境 | 能力 | 说明 |
+|------|------|------|------|------|------|
+| voxcpm | VoxCPM2 | tts/VoxCPM2/ | WSL2 + conda(voxcpm) | tts / voice_design / voice_clone / streaming | 扩散模型，音色设计强 |
+| moss-tts | MOSS-TTSD | tts/MOSS-TTSD/ | WSL2 + conda(moss-tts) | tts / voice_clone / voice_design | 双模型路由（TTSD + VoiceGenerator） |
+| qwen3-tts | qwen3-tts | tts/qwen3-tts/ | WSL2 + conda(qwen3-tts) | tts / voice_design / voice_clone | 9 种预设音色 |
+| higgs-audio | higgs-audio | tts/higgs-audio/ | Docker（外部后端） | tts / voice_clone | SGLang-Omni，外部 HTTP |
+| index-tts | IndexTTS2 | tts/IndexTTS25/ | **Windows venv**（外部后端） | tts / voice_clone / **emotion** / streaming | 情绪表达 + 时长控制 + 零样本克隆 |
 
-> 本项目**没有统一网关**：每个引擎目录下的 `webapi.py` 独立暴露 OpenAI 兼容的 `POST /v1/audio/speech`，需按各引擎目录下的 readme.md 手动启动（WSL2 conda / Docker / Windows venv）。评测客户端按 `client/config.yaml` 中的地址直连对应端口。
+> 本项目**没有统一网关**：每个引擎目录下的 `webapi.py` 独立暴露 OpenAI 兼容的 `POST /v1/audio/speech`，需按各引擎目录下的 readme.md 手动启动（WSL2 conda / Docker / Windows venv）。所有引擎统一监听 **8002** 端口，`client/config.yaml` 中的 `base_url` 已全部指向 `http://localhost:8002`，**同一时刻只运行一个引擎**。
 
 ## 测试维度
 
@@ -106,12 +106,12 @@
 │   └── indextts/                   # IndexTTS-2.5 官方示例音频（voice_01~12 音色参考 + emo_* 情绪参考）
 │       └── voice.md                #    各音频的用途、配套文本与情绪参数标注
 │
-├── tts/                        # 各 TTS 引擎（模型本体不在此目录）
-│   ├── VoxCPM2/                    # webapi.py 独立暴露 OpenAI 兼容接口（端口 8000）
-│   ├── higgs-audio/                # Docker 外部后端（端口 8001）
-│   ├── MOSS-TTSD/                  # 端口 8004
-│   ├── qwen3-tts/                  # 端口 8005
-│   └── IndexTTS25/                 # Windows venv 外部后端（端口 8006）
+├── tts/                        # 各 TTS 引擎（模型本体不在此目录），webapi 统一使用端口 8002
+│   ├── VoxCPM2/
+│   ├── higgs-audio/                # Docker 外部后端（容器映射到宿主 8002）
+│   ├── MOSS-TTSD/
+│   ├── qwen3-tts/
+│   └── IndexTTS25/                 # Windows venv 外部后端
 │
 ├── results/                    # 评测结果，按引擎和时间组织
 │   └── voxcpm/
@@ -133,19 +133,22 @@
 
 ### 1. 启动引擎 webapi
 
-按所需引擎目录下的 readme.md 启动对应后端，例如：
+按所需引擎目录下的 readme.md 启动对应后端，统一监听 **8002** 端口（各 webapi.py 的默认端口即为 8002）：
 
-- VoxCPM2：WSL2 中 `conda activate voxcpm && python tts/VoxCPM2/webapi.py --port 8000`
-- IndexTTS2：Windows venv 中按 `tts/IndexTTS25/readme.md` 启动（端口 8006）
-- higgs-audio：Docker 启动 SGLang-Omni（端口 8001）
+- VoxCPM2：WSL2 中 `conda activate voxcpm && python tts/VoxCPM2/webapi.py`
+- IndexTTS2：Windows venv 中按 `tts/IndexTTS25/readme.md` 启动
+- higgs-audio：Docker 启动 SGLang-Omni，容器端口映射到宿主 8002
+
+> 同一时刻只运行一个引擎，端口冲突时先停掉前一个。
 
 ### 2. 运行评测客户端
 
 ```bash
 python -m client.runner --engine voxcpm            # 全部测试
 python -m client.runner --engine voxcpm --test T02 # 指定测试用例
-python -m client.runner --engine index-tts --base-url http://localhost:8006
 ```
+
+`client/config.yaml` 中所有引擎的 `base_url` 均已统一为 `http://localhost:8002`；临时换地址时可用 `--base-url` 覆盖。
 
 客户端会先请求 `{base_url}/health` 确认引擎在线，再按 `client/config.yaml` 中声明的能力自动执行对应测试。
 

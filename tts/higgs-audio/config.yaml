@@ -2,11 +2,11 @@
 # Docker 方式启动，通过 SGLang-Omni 服务提供 OpenAI 兼容接口
 # 无需 conda 环境，无需网关自动启动后端
 
-# webapi 地址（Docker 容器已手动启动，直接访问）
-backend_url: "http://localhost:8001"
+# webapi 地址（Docker 容器需以 -p 8002:... 映射到宿主 8002 端口）
+backend_url: "http://localhost:8002"
 
-# webapi 端口（Docker 容器映射端口）
-webapi_port: 8001
+# webapi 端口
+webapi_port: 8002
 
 # 请求超时（秒）
 timeout: 300
