@@ -1,0 +1,28 @@
+# 引擎注册表：各引擎 webapi 独立启动（见 tts/<引擎>/readme.md），
+# 客户端按 OpenAI 兼容方式直连各引擎的 /v1/audio/speech。
+engines:
+  voxcpm:
+    model: VoxCPM2
+    base_url: http://localhost:8000
+    engine_dir: tts/VoxCPM2
+    capabilities: [tts, voice_design, voice_clone, streaming]
+  higgs-audio:
+    model: higgs-audio
+    base_url: http://localhost:8001
+    engine_dir: tts/higgs-audio
+    capabilities: [tts, voice_clone]
+  moss-tts:
+    model: MOSS-TTSD
+    base_url: http://localhost:8004
+    engine_dir: tts/MOSS-TTSD
+    capabilities: [tts, voice_clone, voice_design]
+  qwen3-tts:
+    model: qwen3-tts
+    base_url: http://localhost:8005
+    engine_dir: tts/qwen3-tts
+    capabilities: [tts, voice_clone, voice_design]
+  index-tts:
+    model: IndexTTS2
+    base_url: http://localhost:8006
+    engine_dir: tts/IndexTTS25
+    capabilities: [tts, voice_clone, emotion, streaming]

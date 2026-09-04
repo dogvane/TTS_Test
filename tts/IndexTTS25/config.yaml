@@ -1,0 +1,44 @@
+# IndexTTS 2.5 引擎配置
+#
+# 本引擎在 Windows 原生 venv 中运行（.venv/Scripts/python.exe），
+# 与本项目其余 WSL2+conda 引擎分属两个操作系统。
+# 因此采用「外部独立后端 + HTTP」模式（同 higgs-audio）：
+#   1. 在 Windows 侧手动启动 webapi：见下方启动命令
+#   2. 网关只通过 HTTP 调用，不负责拉起后端
+#
+# 手动启动（Windows，在 IndexTTS 的 .venv 下）：
+#   cd O:\ai\TTS\TTS_Test
+#   .venv\Scripts\python.exe  # 需为 IndexTTS 的 venv
+#   set PYTHONPATH=O:\ai\TTS\TTS_Test;G:\ai\TTS\index-tts\IndexTTS-2.5\index-tts
+#   python -m tts.IndexTTS25.webapi --port 8006
+# 或在 WSL2 中直接访问已启动的 Windows 后端（localhost 互通）。
+
+# webapi 地址（外部独立启动，网关直接访问）
+backend_url: "http://localhost:8006"
+
+# webapi 端口（仅用于 /health 探活与 init_model 的端口匹配）
+webapi_port: 8006
+
+# 请求超时（秒）
+timeout: 300
+
+# 音频参数（模型实际输出采样率 22050Hz）
+sample_rate: 22050
+
+# 模型目录（Windows 路径，权重文件所在目录，含 config.yaml）
+model_dir: "G:/ai/TTS/index-tts/IndexTTS-2.5/models"
+
+# 模型配置文件（model_dir 下的 config.yaml）
+cfg_path: "G:/ai/TTS/index-tts/IndexTTS-2.5/models/config.yaml"
+
+# IndexTTS 源代码根目录（webapi.py 通过 sys.path 引入 indextts 包）
+source_path: "G:/ai/TTS/index-tts/IndexTTS-2.5/index-tts"
+
+# 外部后端模式标记（网关不尝试用 conda / sys.executable 启动此引擎）
+external_mode: true
+
+# 推理设备
+device: "cuda"
+
+# 是否使用 fp16（CUDA 下建议开启，提速且省显存）
+use_fp16: true

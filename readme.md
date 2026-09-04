@@ -6,8 +6,15 @@
 
 ## 参测 TTS 引擎
 
-| 引擎 | 说明 |
-|------|------|
+| 引擎（model id） | 目录 | 环境 | 能力 | 说明 |
+|------|------|------|------|------|
+| VoxCPM2 | tts/VoxCPM2/ | WSL2 + conda(voxcpm) | tts / voice_design / voice_clone / streaming | 扩散模型，音色设计强 |
+| MOSS-TTSD | tts/MOSS-TTSD/ | WSL2 + conda(moss-tts) | tts / voice_clone / voice_design | 双模型路由（TTSD + VoiceGenerator） |
+| qwen3-tts | tts/qwen3-tts/ | WSL2 + conda(qwen3-tts) | tts / voice_design / voice_clone | 9 种预设音色 |
+| higgs-audio | tts/higgs-audio/ | Docker（外部后端） | tts / voice_clone | SGLang-Omni，外部 HTTP |
+| IndexTTS2 | tts/IndexTTS25/ | **Windows venv**（外部后端） | tts / voice_clone / **emotion** / streaming | 情绪表达 + 时长控制 + 零样本克隆 |
+
+> 本项目**没有统一网关**：每个引擎目录下的 `webapi.py` 独立暴露 OpenAI 兼容的 `POST /v1/audio/speech`，需按各引擎目录下的 readme.md 手动启动（WSL2 conda / Docker / Windows venv）。评测客户端按 `client/config.yaml` 中的地址直连对应端口。
 
 ## 测试维度
 
@@ -39,12 +46,9 @@
 
 | 编号 | 类型 | 状态 | 说明 |
 |------|------|------|------|
-| T01 | 纯中文新闻 | 待补充 | 无英文的常规科技新闻段落 |
-| T02 | 中英混合新闻 | 已有 | 含产品名、版本号的科技项目介绍（URL 短链性能测试） |
-| T03 | 技术术语密集 | 待补充 | 大量 IT 术语的段落 |
-| T04 | 版本号与数字 | 待补充 | 包含版本号、百分比、文件大小的句子 |
-| T05 | 长文本稳定性 | 待补充 | 500 字以上连续播报 |
-| T06 | 情绪变化 | 待补充 | 同一段新闻分别用不同情绪合成 |
+| T02 | 中英混合新闻 | 已有 | 含产品名、版本号的科技项目介绍（URL 短链性能测试），`T02_mixed_news.txt` |
+
+> 文本测试目前仅保留 T02 作为基础 TTS 基线（default 音色）。原规划的 T01/T03/T04/T05 已迁移为克隆模式用例（见下方 T09），T06 迁移为情绪克隆用例（见下方 T06_emotion_clone.csv）。
 
 ### 音色设计测试（自动，需模型支持 voice_design）
 
@@ -54,96 +58,128 @@
 
 ### 语音克隆测试（自动，需模型支持 voice_clone）
 
-使用 `T08_voice_clone.csv` 定义参考音频路径和对应文本（CSV 格式：第一列参考音频路径，第二列文本）。
+使用以下 CSV 定义参考音频路径和对应文本（CSV 格式：第一列参考音频路径，第二列文本）：
+
+- `T08_voice_clone.csv`：基础克隆用例，验证克隆音色对原台词的复述能力（使用 `reference_audio/` 下两段《让子弹飞》台词音频）。
+- `T09_voice_clone_texts.csv`：多音色 × 多文本特征克隆，4 个用例各配一个不同音色的参考音频，考察克隆音色在不同文本特征下的表现（参考音频取自 `reference_audio/indextts/` 官方示例）：
+
+  | 用例 | 参考音频 | 考察点 |
+  |------|----------|--------|
+  | T01 | reference_audio/indextts/voice_05.wav | 无英文基线、克隆自然度 |
+  | T03 | reference_audio/indextts/voice_03.wav | IT 专有名词发音（Kubernetes / gRPC / Nginx 等） |
+  | T04 | reference_audio/indextts/voice_04.wav | 版本号与数字朗读（v3.2.1、240%、2.5 TB） |
+  | T05 | reference_audio/indextts/voice_06.wav | 长文本（500 字+）音色稳定性 |
+
+### 情绪克隆测试（自动，需模型支持 voice_clone + emotion）
+
+使用 `T06_emotion_clone.csv`，CSV 格式为 3 字段：参考音频, 情绪, 说话内容。
+
+固定一个中性参考音频（`reference_audio/indextts/voice_03.wav`）与同一段 IT 文本，扫描 6 种情绪：兴奋、严肃、轻松、中性、悲伤、愤怒。目的是隔离「情绪」单一变量，横向对比各引擎的情绪控制能力。
+
+## 参考音频说明
+
+- `reference_audio/` 根目录下为《让子弹飞》台词片段等实际音频，供 T08 基础克隆测试使用。
+- T09（多音色克隆）与 T06（情绪克隆）的参考音频已改为使用 `reference_audio/indextts/` 下的 IndexTTS 官方示例音频（见下节），原先规划的 `ref_it_male_news.wav` 等占位文件不再需要。
+
+### IndexTTS 官方示例音频（reference_audio/indextts/）
+
+来自 IndexTTS-2.5 官方仓库的示例（源目录 `G:/ai/TTS/index-tts/IndexTTS-2.5/index-tts/examples/`），共 13 个 wav：
+
+- `voice_01.wav ~ voice_12.wav`：**音色参考音频**，覆盖中英文、长短文本、多种音色（相声、播报、影视剧台词等），可用作克隆测试的参考音色。
+- `emo_sad.wav`、`emo_hate.wav`：**情绪参考音频**（悲伤、厌恶），供 IndexTTS 的「情感参考音频」控制方式使用。
+
+每个文件的配套合成文本与情绪控制参数标注见 [reference_audio/indextts/voice.md](reference_audio/indextts/voice.md)（依据官方 `cases.jsonl` 与 `webui.py` 整理）。
 
 ## 项目目录
 
 ```text
 ├── readme.md
 ├── test_texts/                 # 输入：统一的测试文本（所有引擎共用）
-│   ├── T01_chinese_news.txt
-│   ├── T02_mixed_news.txt
-│   ├── T03_tech_terms.txt
-│   ├── T04_version_numbers.txt
-│   ├── T05_long_text.txt
-│   └── T06_emotion.txt
+│   ├── T02_mixed_news.txt          # 基础 TTS 基线（中英混合新闻）
+│   ├── T07_voice_design.csv        # 音色设计：音色描述,文本
+│   ├── T08_voice_clone.csv         # 基础克隆：参考音频,文本
+│   ├── T09_voice_clone_texts.csv   # 多音色克隆：T01/T03/T04/T05 迁移用例
+│   └── T06_emotion_clone.csv       # 情绪克隆：参考音频,情绪,文本
 │
 ├── reference_audio/            # 输入：用于 voice clone 的参考音频
-│   └── sample.wav
+│   ├── sample.wav
+│   └── indextts/                   # IndexTTS-2.5 官方示例音频（voice_01~12 音色参考 + emo_* 情绪参考）
+│       └── voice.md                #    各音频的用途、配套文本与情绪参数标注
 │
-├── server/                     # 统一 API 网关
-│   ├── main.py                 #    FastAPI 入口，暴露 POST /v1/audio/speech
-│   ├── base_adapter.py         #    适配器基类
-│   └── config.yaml             #    全局配置
-│
-├── tts/                        # 各 TTS 适配代码（模型本体不在此目录）
-│   ├── voxcpm/
-│   │   ├── adapter.py          #    适配器实现（调用本地/远程模型）
-│   │   └── config.yaml         #    引擎配置（API Key、endpoint、模型路径等）
-│   │
-│   ├── qwen-tts/               # 新增引擎只需新建目录、实现 adapter.py
-│   │   ├── adapter.py
-│   │   └── config.yaml
-│   │
-│   └── .../
+├── tts/                        # 各 TTS 引擎（模型本体不在此目录）
+│   ├── VoxCPM2/                    # webapi.py 独立暴露 OpenAI 兼容接口（端口 8000）
+│   ├── higgs-audio/                # Docker 外部后端（端口 8001）
+│   ├── MOSS-TTSD/                  # 端口 8004
+│   ├── qwen3-tts/                  # 端口 8005
+│   └── IndexTTS25/                 # Windows venv 外部后端（端口 8006）
 │
 ├── results/                    # 评测结果，按引擎和时间组织
 │   └── voxcpm/
 │       └── 2026-05-04_14-00-00/
 │           ├── T02.wav         #    生成的音频
 │           ├── T02.srt         #    音频字幕（文本对齐）
-│           └── report.md       #    本次评测报告
+│           └── report.html     #    本次评测报告
 │
-├── client/                     # 评测客户端
-│   └── runner.py               #    遍历 test_texts，逐个请求并计时、保存结果
-│
-└── reports/                    # 汇总报告（跨引擎对比）
+└── client/                     # 评测客户端
+    ├── runner.py               #    遍历 test_texts，直连各引擎请求并计时、保存结果
+    └── config.yaml             #    引擎注册表：引擎名 → base_url / model / capabilities
 ```
 
-- `tts/` 只存放适配代码和配置，模型本体（权重文件等）不在本项目中，通过 `config.yaml` 指定模型路径或 API endpoint
-- `output/` 和 `results/` 是统一顶层目录，按引擎名分子目录，便于横向对比和统一管理
-- 新增引擎只需新建目录、实现 `adapter.py`，注册到 server 即可
+- `tts/` 只存放各引擎的 webapi 代码和配置，模型本体（权重文件等）不在本项目中
+- `results/` 按引擎名分子目录，便于横向对比和统一管理
+- 新增引擎只需新建目录、实现 `webapi.py`（暴露 `/v1/audio/speech` 和 `/health`），并在 `client/config.yaml` 注册即可
 
-## server 和 模型 adapter 的功能
+## 使用方式
 
-### 1. 音频生成接口（兼容 OpenAI）
+### 1. 启动引擎 webapi
 
-`POST /v1/audio/speech` — 所有引擎统一的 TTS 合成入口，兼容 OpenAI 接口格式。
+按所需引擎目录下的 readme.md 启动对应后端，例如：
+
+- VoxCPM2：WSL2 中 `conda activate voxcpm && python tts/VoxCPM2/webapi.py --port 8000`
+- IndexTTS2：Windows venv 中按 `tts/IndexTTS25/readme.md` 启动（端口 8006）
+- higgs-audio：Docker 启动 SGLang-Omni（端口 8001）
+
+### 2. 运行评测客户端
+
+```bash
+python -m client.runner --engine voxcpm            # 全部测试
+python -m client.runner --engine voxcpm --test T02 # 指定测试用例
+python -m client.runner --engine index-tts --base-url http://localhost:8006
+```
+
+客户端会先请求 `{base_url}/health` 确认引擎在线，再按 `client/config.yaml` 中声明的能力自动执行对应测试。
+
+## 接口约定（兼容 OpenAI）
+
+每个引擎的 `webapi.py` 暴露 OpenAI 兼容接口：
+
+### 1. 音频生成
+
+`POST /v1/audio/speech`
 
 ```json
 {
-  "model": "voxcpm",
+  "model": "VoxCPM2",
   "input": "要合成的文本",
   "voice": "default",
-  "response_format": "wav"
+  "response_format": "wav",
+  "reference_audio": "<base64 参考音频，克隆时可选>",
+  "prompt_text": "<参考音频的转写文本，可选>",
+  "emotion": "<情绪，可选>",
+  "session_id": "<多段合成的会话 id，可选>",
+  "session_action": "start | continue | end"
 }
 ```
 
-### 2. 查询可用模型
+返回 WAV 音频字节流。
 
-`GET /v1/models` — 返回当前注册的所有可用 TTS 引擎及其能力。
+### 2. 健康检查
 
-响应示例：
+`GET /health` — 返回 `{"status": "ok", "model": "...", "sample_rate": ...}`。
 
-```json
-{
-  "models": [
-    {
-      "id": "voxcpm",
-      "capabilities": ["tts", "voice_design", "voice_clone"],
-      "voices": ["default", "male_news", "female_soft"],
-      "clone_voices": ["sample"],
-      "sample_rate": 48000
-    }
-  ]
-}
-```
+### 能力声明
 
-### 3. 查询单个模型能力
-
-`GET /v1/models/{model}/capabilities` — 返回该引擎支持的功能。
-
-每个 adapter 需声明以下能力：
+`client/config.yaml` 中每个引擎声明以下能力：
 
 | 能力 | 说明 |
 |------|------|
@@ -151,21 +187,4 @@
 | `voice_design` | 通过自然语言描述生成音色 |
 | `voice_clone` | 基于参考音频的语音克隆 |
 | `emotion` | 支持情绪/语气控制 |
-| `ssml` | 支持 SSML 标记 |
-| `streaming` | 支持流式输出 |
-
-### 4. 音色库
-
-每个 adapter 需提供默认音色列表，分两类：
-
-- **预设音色**：引擎内置或通过描述生成的音色（如 `default`、`male_news`）
-- **克隆音色**：基于参考音频的克隆，开发者需将样例音频放入 `tts/{engine}/voices/` 目录
-
-```
-tts/VoxCPM2/
-├── adapter.py
-├── config.yaml
-├── webapi.py
-└── voices/                 # 克隆音色的样例音频
-    └── sample.wav          #    开发者放入默认克隆样例
-```
+| `streaming` | 支持流式输出（`/v1/audio/speech/stream`） |
