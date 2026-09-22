@@ -142,6 +142,22 @@ def check_health(engine_cfg: dict) -> dict:
         sys.exit(1)
 
 
+def fetch_voices(engine_cfg: dict) -> list[str]:
+    """获取引擎的预设角色列表（GET /v1/voices）；不支持时返回空列表。"""
+    base_url = engine_cfg["base_url"].rstrip("/")
+    try:
+        resp = requests.get(f"{base_url}/v1/voices", timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        voices = [v["id"] if isinstance(v, dict) else str(v) for v in data.get("voices", [])]
+        default = data.get("default")
+        logger.info("[voices] %d presets available, default=%s", len(voices), default or "-")
+        return voices
+    except (requests.RequestException, ValueError):
+        logger.info("[voices] engine does not expose /v1/voices, falling back to 'default'")
+        return []
+
+
 def synthesize(engine_cfg: dict, text: str, voice: str = "default",
                reference_wav_bytes: bytes | None = None,
                prompt_text: str | None = None,
@@ -169,7 +185,8 @@ def synthesize(engine_cfg: dict, text: str, voice: str = "default",
 
     t0 = time.perf_counter()
     base_url = engine_cfg["base_url"].rstrip("/")
-    resp = requests.post(f"{base_url}/v1/audio/speech", json=payload, timeout=300)
+    # 1500s：长文本 + 高 RTF 引擎（如 breeze-tts eager 模式）单请求实测可达 19 分钟
+    resp = requests.post(f"{base_url}/v1/audio/speech", json=payload, timeout=1500)
     elapsed = time.perf_counter() - t0
 
     if resp.status_code != 200:
@@ -208,7 +225,8 @@ def split_text_to_segments(text: str, max_chars: int = 100) -> list[str]:
 
 
 def synthesize_segments(engine_cfg: dict, text: str,
-                        max_chars: int = 100) -> tuple[bytes, dict]:
+                        max_chars: int = 100,
+                        voice: str = "default") -> tuple[bytes, dict]:
     """分段合成文本，合并所有音频片段为一个 WAV。使用 session 自举克隆保持音色一致。"""
     segments = split_text_to_segments(text, max_chars)
     if not segments:
@@ -233,7 +251,7 @@ def synthesize_segments(engine_cfg: dict, text: str,
             action = "continue"
         logger.info("  segment %d/%d (%d chars) action=%s...",
                      i + 1, len(segments), len(seg), action)
-        audio_bytes, metrics = synthesize(engine_cfg, seg,
+        audio_bytes, metrics = synthesize(engine_cfg, seg, voice=voice,
                                           session_id=session_id,
                                           session_action=action)
         total_tts_time += metrics["total_time"]
@@ -442,9 +460,13 @@ def run(engine: str, test_ids: list[str] | None = None,
     logger.info("[health] status=%s sample_rate=%s", health.get("status"), health.get("sample_rate"))
     init_info = health
 
+    # 获取预设角色列表；基础 TTS 默认使用第一个角色
+    voices = fetch_voices(engine_cfg)
+    default_voice = voices[0] if voices else "default"
+
     capabilities = engine_cfg.get("capabilities", [])
     model_info = {"id": engine_cfg.get("model", engine), "capabilities": capabilities,
-                  "voices": [], "clone_voices": []}
+                  "voices": voices, "clone_voices": []}
 
     if test_ids is None:
         test_ids = list_test_texts()
@@ -458,21 +480,24 @@ def run(engine: str, test_ids: list[str] | None = None,
 
     # ── 1. 基础 TTS 测试 ──
     if "tts" in capabilities and test_ids:
-        logger.info("=== 基础 TTS 测试 (%d texts) ===", len(test_ids))
+        logger.info("=== 基础 TTS 测试 (%d texts, voice=%s) ===", len(test_ids), default_voice)
         rows = []
         for test_id in test_ids:
             text = read_test_text(test_id)
             logger.info("[%s] TTS (%d chars)...", test_id, len(text))
             try:
-                audio_bytes, metrics = synthesize_segments(engine_cfg, text)
+                audio_bytes, metrics = synthesize_segments(engine_cfg, text, voice=default_voice)
                 wav_file = save_wav(run_dir, test_id, audio_bytes)
                 save_srt(run_dir, test_id, text, metrics["audio_duration"])
                 logger.info("[%s] Done (RTF=%.3f)", test_id, metrics["rtf"])
-                rows.append({"id": test_id, "text": text, "audio_file": wav_file, "voice": "default", **metrics})
+                rows.append({"id": test_id, "text": text, "audio_file": wav_file,
+                             "voice": default_voice, **metrics})
             except Exception as e:
                 logger.error("[%s] Failed: %s", test_id, e)
                 rows.append({"id": test_id, "text": text, "error": str(e)})
-        sections.append({"title": "基础 TTS 测试", "description": "使用 default 音色合成所有测试文本", "rows": rows})
+        sections.append({"title": "基础 TTS 测试",
+                         "description": f"使用预设角色 '{default_voice}' 合成所有测试文本（长文本分段后同一角色）",
+                         "rows": rows})
 
     # ── 2. 音色设计测试 ──
     if "voice_design" in capabilities:

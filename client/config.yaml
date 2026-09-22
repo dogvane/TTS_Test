@@ -26,3 +26,8 @@ engines:
     base_url: http://localhost:8002
     engine_dir: tts/IndexTTS25
     capabilities: [tts, voice_clone, emotion, streaming]
+  breeze-tts:
+    model: breeze-tts-2
+    base_url: http://localhost:8010
+    engine_dir: tts/breeze-tts
+    capabilities: [tts, voice_design, voice_clone, emotion]

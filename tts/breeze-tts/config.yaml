@@ -1,0 +1,13 @@
+# Breeze-TTS 2 引擎配置
+# 模型本体不在本进程加载：webapi.py 只做协议转换，转发到 Breeze OpenAI 服务。
+backend_url: http://127.0.0.1:8000
+webapi_port: 8010
+model: breeze-tts-2
+sample_rate: 24000
+# Breeze 服务启动方式（模型位于 G:\ai\TTS\Breeze-TTS-2）：
+#   cd /d G:\ai\TTS\Breeze-TTS-2\src\test_tts && start_server.bat
+capabilities: [tts, voice_design, voice_clone, emotion]
+notes: >
+  指令场景自动使用 cfg_scale=4（官方建议值）；
+  参考音频文字稿优先用 webapi.py 内置的 REFERENCE_TRANSCRIPTS 表
+  （来源 IndexTTS-2.5 官方 examples/cases.jsonl），否则回退 prompt_text。
